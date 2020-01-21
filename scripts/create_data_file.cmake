@@ -1,0 +1,25 @@
+if (NOT YOLO_MODEL_NAME)
+   message(WARNING Needed to be set YOLO_MODEL_NAME)
+   return()
+endif()
+
+# calculate classes count
+file(STRINGS ${YOLO_DATASET_FOLDER_PATH}/_.names YOLO_CLASSES)
+list(LENGTH YOLO_CLASSES YOLO_CLASSES_COUNT)
+message(STATUS YOLO_CLASSES_COUNT=${YOLO_CLASSES_COUNT})
+
+# create train list
+file(GLOB YOLO_TRAIN_LIST ${YOLO_DATASET_FOLDER_PATH}/*.png)
+string(REPLACE ";" "\n" YOLO_TRAIN_LIST "${YOLO_TRAIN_LIST}")
+file(GENERATE OUTPUT "${CMAKE_CURRENT_LIST_DIR}/${YOLO_MODEL_NAME}-train.txt" CONTENT
+   "${YOLO_TRAIN_LIST}"
+   )
+
+# generate *.data file
+file(GENERATE OUTPUT "${CMAKE_CURRENT_LIST_DIR}/${YOLO_MODEL_NAME}.data" CONTENT
+   "classes = ${YOLO_CLASSES_COUNT}
+train = ${CMAKE_CURRENT_LIST_DIR}/${YOLO_MODEL_NAME}-train.txt
+#valid = ${CMAKE_CURRENT_LIST_DIR}/${YOLO_MODEL_NAME}-test.txt
+names = ${YOLO_DATASET_FOLDER_PATH}/_.names
+backup = ${CMAKE_CURRENT_LIST_DIR}/backup
+")

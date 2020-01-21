@@ -1,10 +1,16 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "datasetproject.h"
+
 #include <QMainWindow>
 #include <QWheelEvent>
 #include <QTableWidgetItem>
 #include <QMessageBox>
+#include <QListWidget>
+#include <QtWidgets/QProgressDialog>
+
+#include <QtCore/QProcess>
 
 #include <iostream>
 #include <fstream>
@@ -22,8 +28,8 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_pushButton_open_files_clicked();
-    void on_pushButton_change_dir_clicked();
+    void on_pushButton_create_from_video_clicked();
+    void on_pushButtonOpenProject_clicked();
     void on_pushButton_save_clicked();
     void on_pushButton_remove_clicked();
 
@@ -32,55 +38,58 @@ private slots:
 
     void keyPressEvent(QKeyEvent *);
 
-    void next_img(bool bSavePrev = true);
-    void prev_img(bool bSavePrev = true);
-    void save_label_data() const;
+    void setNextImage();
+    void setPreviousImage();
     void clear_label_data();
 
-    void next_label();
-    void prev_label();
+    void nextClass();
+    void prevClass();
 
     void on_tableWidget_label_cellDoubleClicked(int , int );
     void on_tableWidget_label_cellClicked(int , int );
 
     void on_horizontalSlider_images_sliderMoved(int );
 
-private:
-    void            init();
-    void            init_table_widget();
-    void            init_button_event();
-    void            init_horizontal_slider();
-
-    void            img_open(const int);
-    void            set_label_progress(const int);
-    void            set_focused_file(const int);
-
-    void            goto_img(const int);
-
-    void            load_label_list_data(QString);
-    QString         get_labeling_data(QString)const;
-
-    void            set_label(const int);
-    void            set_label_color(const int , const QColor);
-
-    void            pjreddie_style_msgBox(QMessageBox::Icon, QString, QString);
-
-    void            open_img_dir(bool&);
-    void            open_obj_file(bool&);
-
-    void            reupdate_img_list();
-
-    Ui::MainWindow *ui;
-
-    QString         m_imgDir;
-    QStringList     m_imgList;
-    int             m_imgIndex;
-
-    QStringList     m_objList;
-    int             m_objIndex;
+    void datasetIteratorUpdated();
 
 protected:
-    void    wheelEvent(QWheelEvent *);
+    void wheelEvent(QWheelEvent*);
+
+private:
+    void init();
+    void initTableWidget();
+    void initTableWidgetContextMenuSetup();
+
+    void updateButtonEnabling(bool isEnabled);
+    void updateDatasetNavigator();
+
+    bool openVideos();
+    void img_open(const int);
+
+    void setCurrentImg();
+
+    void load_label_list_data(QString);
+    auto get_labeling_data(QString) const -> QString;
+
+    void updateCurrentClass();
+
+    // TODO: Should be deletd after test
+    //void saveClassNamesListToJson();
+    void loadClassNameList();
+    void loadDatasetList();
+
+    Ui::MainWindow*        ui;
+    // TODO: May be it should be stored in the datasetproject source
+    QVariantMap            _datasetList;
+    QVariantMap::iterator  _datasetIt;
+    QVariantMap            _classesList;
+    QVariantMap::iterator  _classesIt;
+
+    QStringList            m_objList;
+    int                    m_objIndex{};
+    QProcess*              m_SlicingDatasetProcess{};
+    QProgressDialog*       m_progressDialog{};
+    DatasetProject         _datasetProject;
 };
 
 #endif // MAINWINDOW_H

@@ -34,9 +34,6 @@
   <property name="windowTitle">
    <string>YoloLabel</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true">background-color : rgb(0, 0, 17);</string>
-  </property>
   <widget class="QWidget" name="centralWidget">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -80,16 +77,13 @@
           <bold>true</bold>
          </font>
         </property>
-        <property name="styleSheet">
-         <string notr="true">color : rgb(255, 187, 0);</string>
-        </property>
         <property name="text">
          <string>File:</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="label_img" name="label_image">
+       <widget class="BoundingBoxSelector" name="label_image">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -114,14 +108,6 @@
         </property>
         <property name="mouseTracking">
          <bool>true</bool>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">QLabel { background-color : rgb(0, 0, 17); color : rgb(187, 255, 254);
-border-style: outset;
-border-width: 2px;
-border-color: rgb(0, 255, 255);}
-
-</string>
         </property>
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
@@ -173,12 +159,6 @@ border-color: rgb(0, 255, 255);}
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
             </property>
-            <property name="styleSheet">
-             <string notr="true">background-color : rgb(0, 0, 17);color : rgb(0, 255, 255);
-border-style: outset;
-border-width: 2px;
-border-color: rgb(0, 255, 255);</string>
-            </property>
             <property name="text">
              <string>Prev</string>
             </property>
@@ -215,12 +195,6 @@ border-color: rgb(0, 255, 255);</string>
             </property>
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color : rgb(0, 0, 17);color : rgb(0, 255, 255);
-border-style: outset;
-border-width: 2px;
-border-color: rgb(0, 255, 255);</string>
             </property>
             <property name="text">
              <string>Next</string>
@@ -259,25 +233,6 @@ border-color: rgb(0, 255, 255);</string>
             <property name="focusPolicy">
              <enum>Qt::ClickFocus</enum>
             </property>
-            <property name="styleSheet">
-             <string notr="true">
-QSlider::groove:horizontal {
-    border: 1px solid #999999;
-    height: 8px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size */
-    background: rgb(0, 255, 255);
-    margin: 2px 0;
-}
-
-
-QSlider::handle:horizontal {
-   background: rgb(255, 187, 0);
-    border: 1px solid #5c5c5c;
-    width: 18px;
-    margin: -10px 0; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
-    border-radius: 3px;
-}
-</string>
-            </property>
             <property name="maximum">
              <number>0</number>
             </property>
@@ -312,12 +267,6 @@ QSlider::handle:horizontal {
               <bold>true</bold>
              </font>
             </property>
-            <property name="styleSheet">
-             <string notr="true">background-color : rgb(0, 0, 17);color : rgb(0, 255, 255);
-border-style: outset;
-border-width: 2px;
-border-color: rgb(0, 255, 255);</string>
-            </property>
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
             </property>
@@ -337,10 +286,10 @@ border-color: rgb(0, 255, 255);</string>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
-           <widget class="QPushButton" name="pushButton_open_files">
+           <widget class="QPushButton" name="pushButton_create_from_video">
             <property name="minimumSize">
              <size>
-              <width>200</width>
+              <width>100</width>
               <height>91</height>
              </size>
             </property>
@@ -360,14 +309,8 @@ border-color: rgb(0, 255, 255);</string>
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
             </property>
-            <property name="styleSheet">
-             <string notr="true">background-color : rgb(0, 0, 17);color : rgb(0, 255, 255);
-border-style: outset;
-border-width: 2px;
-border-color: rgb(0, 255, 255);</string>
-            </property>
             <property name="text">
-             <string>Open Files</string>
+             <string>Create from video</string>
             </property>
             <property name="autoDefault">
              <bool>false</bool>
@@ -378,13 +321,10 @@ border-color: rgb(0, 255, 255);</string>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_change_dir">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
+           <widget class="QPushButton" name="pushButtonOpenProject">
             <property name="minimumSize">
              <size>
-              <width>200</width>
+              <width>100</width>
               <height>91</height>
              </size>
             </property>
@@ -404,14 +344,8 @@ border-color: rgb(0, 255, 255);</string>
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
             </property>
-            <property name="styleSheet">
-             <string notr="true">background-color : rgb(0, 0, 17);color : rgb(0, 255, 255);
-border-style: outset;
-border-width: 2px;
-border-color: rgb(0, 255, 255);</string>
-            </property>
             <property name="text">
-             <string>Change Directory</string>
+             <string>Open project</string>
             </property>
             <property name="autoDefault">
              <bool>false</bool>
@@ -428,7 +362,7 @@ border-color: rgb(0, 255, 255);</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>200</width>
+              <width>100</width>
               <height>91</height>
              </size>
             </property>
@@ -447,12 +381,6 @@ border-color: rgb(0, 255, 255);</string>
             </property>
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color : rgb(0, 0, 17);color : rgb(0, 255, 255);
-border-style: outset;
-border-width: 2px;
-border-color: rgb(0, 255, 255);</string>
             </property>
             <property name="text">
              <string>Save</string>
@@ -478,7 +406,7 @@ border-color: rgb(0, 255, 255);</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>200</width>
+              <width>100</width>
               <height>91</height>
              </size>
             </property>
@@ -490,12 +418,6 @@ border-color: rgb(0, 255, 255);</string>
             </property>
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color : rgb(0, 0, 17);color : rgb(0, 255, 255);
-border-style: outset;
-border-width: 2px;
-border-color: rgb(0, 255, 255);</string>
             </property>
             <property name="text">
              <string>Remove</string>
@@ -527,12 +449,6 @@ border-color: rgb(0, 255, 255);</string>
             </property>
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color : rgb(0, 0, 17);color : rgb(0, 255, 255);
-border-style: outset;
-border-width: 2px;
-border-color: rgb(0, 255, 255);</string>
             </property>
             <property name="text">
              <string>with crop</string>
@@ -571,9 +487,6 @@ border-color: rgb(0, 255, 255);</string>
                 <bold>true</bold>
                </font>
               </property>
-              <property name="styleSheet">
-               <string notr="true">color : rgb(0, 255, 255);</string>
-              </property>
               <property name="text">
                <string>Log</string>
               </property>
@@ -607,12 +520,6 @@ border-color: rgb(0, 255, 255);</string>
               </property>
               <property name="focusPolicy">
                <enum>Qt::NoFocus</enum>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color : rgb(0, 0, 17);color : rgb(0, 255, 255);
-border-style: outset;
-border-width: 2px;
-border-color: rgb(0, 255, 255);</string>
               </property>
               <property name="tabChangesFocus">
                <bool>false</bool>
@@ -694,29 +601,6 @@ border-color: rgb(0, 255, 255);</string>
         <property name="focusPolicy">
          <enum>Qt::NoFocus</enum>
         </property>
-        <property name="styleSheet">
-         <string notr="true">QHeaderView::section {
-    background-color: rgb(0, 0, 17);
-    color: rgb(255, 187, 0);
-    padding-left: 4px;
-    border: 2px solid rgb(0, 255, 255);
-	font-weight: bold;
-}
-QTableWidget
-{
-border-style: outset;
-border-width: 2px;
-border-color: rgb(0, 255, 255);
-color:rgb(187, 255, 254);
-gridline-width:2px;
-gridline-color: rgb(0, 255, 255);
-}
-
-QTableView {
-    selection-background-color: qlineargradient(x1: 0, y1: 0, x2: 1.0, y2: 1.0, stop: 0 rgb(34, 0, 85), stop: 1 white);
-	selection-color: rgb(0, 255, 0);
-}</string>
-        </property>
         <property name="frameShape">
          <enum>QFrame::WinPanel</enum>
         </property>
@@ -744,11 +628,11 @@ QTableView {
         <attribute name="horizontalHeaderVisible">
          <bool>false</bool>
         </attribute>
-        <attribute name="horizontalHeaderHighlightSections">
-         <bool>false</bool>
-        </attribute>
         <attribute name="horizontalHeaderMinimumSectionSize">
          <number>40</number>
+        </attribute>
+        <attribute name="horizontalHeaderHighlightSections">
+         <bool>false</bool>
         </attribute>
         <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
          <bool>true</bool>
@@ -787,7 +671,7 @@ QTableView {
      <x>0</x>
      <y>0</y>
      <width>1528</width>
-     <height>23</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
@@ -814,9 +698,9 @@ QTableView {
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
-   <class>label_img</class>
+   <class>BoundingBoxSelector</class>
    <extends>QLabel</extends>
-   <header location="global">label_img.h</header>
+   <header location="global">BoundingBoxSelector.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
