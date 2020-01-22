@@ -24,7 +24,7 @@ public:
     };
 
 // TODO: May be should be private
-public:
+private:
     void mouseMoveEvent(QMouseEvent *ev) override;
     void mousePressEvent(QMouseEvent *ev) override;
     void mouseReleaseEvent(QMouseEvent *ev) override;
@@ -55,7 +55,7 @@ public:
     void clearAllClassBoxex();
 
     auto importClassBoxesFromAnnotationFile(QString const&, QVariantMap&) -> QVariantMap;
-    void exportClassBoxesToAnnotationFile(QVariantMap::iterator, QStringList const&) const;
+    void exportClassBoxesToAnnotationFile(QVariantMap::iterator, QVariantMap const&) const;
 
 private:
     void setMousePosition(QPoint&& pos = {});
@@ -80,5 +80,7 @@ private:
     Label::Vector m_objBoundingBoxes;
     Label::Vector::iterator m_selectedItem;
 };
+
+auto toTxtExtention(QString const& filePath) -> QString;
 
 #endif // LABEL_IMG_H

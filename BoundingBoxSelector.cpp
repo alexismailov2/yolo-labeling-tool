@@ -70,14 +70,6 @@ namespace {
         }
     }
 
-    auto toTxtExtention(QString const& filePath) -> QString
-    {
-        std::string filePathStl = filePath.toStdString();
-        std::string strLabelData = filePathStl.substr(0, filePathStl.find_last_of('.')) + ".txt";
-
-        return QString().fromStdString(strLabelData);
-    }
-
     void extractClassBoxes(QVariantMap::iterator datasetIt, std::function<void(QString const&, QRectF&&)>&& extractedClassBoxFn)
     {
         if (!datasetIt->isValid())
@@ -96,6 +88,14 @@ namespace {
     }
 
 } /// end namespace anonymous
+
+auto toTxtExtention(QString const& filePath) -> QString
+{
+    std::string filePathStl = filePath.toStdString();
+    std::string strLabelData = filePathStl.substr(0, filePathStl.find_last_of('.')) + ".txt";
+
+    return QString().fromStdString(strLabelData);
+}
 
 BoundingBoxSelector::BoundingBoxSelector(QWidget *parent)
     : QLabel(parent)
@@ -400,7 +400,7 @@ auto BoundingBoxSelector::importClassBoxesFromAnnotationFile(QString const& labe
                   return item.toList()[0] == static_cast<int>(inputFileValues.at(i));
                 });
                 auto className = (found != classList.cend()) ? found.key() : QString::number(classIndex);
-                if (found != classList.cend())
+                if (found == classList.cend())
                 {
                     QList<QVariant> classData;
                     classData.push_back(classIndex);
@@ -432,24 +432,21 @@ auto BoundingBoxSelector::importClassBoxesFromAnnotationFile(QString const& labe
 }
 
 // TODO: Should be moved to static function of this class or moved to datasetproject
-void BoundingBoxSelector::exportClassBoxesToAnnotationFile(QVariantMap::iterator datasetIt, QStringList const& orderedClassNamesList) const
+void BoundingBoxSelector::exportClassBoxesToAnnotationFile(QVariantMap::iterator datasetIt, QVariantMap const& classes) const
 {
     std::ofstream annotationFile(toTxtExtention(datasetIt.key()).toStdString());
     if (annotationFile.is_open())
     {
         bool isFirst = true;
         extractClassBoxes(datasetIt, [&](QString const& className, QRectF&& boxRect) {
-            if (isFirst)
-            {
-                isFirst = false;
-                annotationFile << '\n';
-            }
-            annotationFile << orderedClassNamesList.indexOf(className) << " "
+            annotationFile << ((!isFirst) ? "\n" : "")
+                           << classes[className].toList()[0].toInt() << " "
                            << std::fixed << std::setprecision(6)
                            << (boxRect.x() + boxRect.width() / 2.) << " "
                            << (boxRect.y() + boxRect.height() / 2.) << " "
                            << boxRect.width() << " "
                            << boxRect.height();
+            isFirst = false;
         });
 // TODO: Should be moved to dedicated function
 //            if(ui->checkBox_cropping->isChecked())

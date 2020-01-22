@@ -72,11 +72,11 @@ private:
     auto get_labeling_data(QString) const -> QString;
 
     void updateCurrentClass();
+    void updateClassesTable();
 
-    // TODO: Should be deletd after test
-    //void saveClassNamesListToJson();
     void loadClassNameList();
     void loadDatasetList();
+    void exportClassListToFile();
 
     Ui::MainWindow*        ui;
     // TODO: May be it should be stored in the datasetproject source
@@ -85,8 +85,6 @@ private:
     QVariantMap            _classesList;
     QVariantMap::iterator  _classesIt;
 
-    QStringList            m_objList;
-    int                    m_objIndex{};
     QProcess*              m_SlicingDatasetProcess{};
     QProgressDialog*       m_progressDialog{};
     DatasetProject         _datasetProject;

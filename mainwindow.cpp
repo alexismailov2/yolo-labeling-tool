@@ -126,32 +126,53 @@ void MainWindow::keyPressEvent(QKeyEvent * event)
 
 void MainWindow::on_pushButton_save_clicked()
 {
+   exportClassListToFile();
    for (auto it = _datasetList.begin(); it != _datasetList.end(); ++it)
    {
-       ui->label_image->exportClassBoxesToAnnotationFile(it, _classesList.keys());
+       ui->label_image->exportClassBoxesToAnnotationFile(it, _classesList);
    }
+}
+
+void MainWindow::exportClassListToFile()
+{
+    auto const classNameFilePath = QFileDialog::getSaveFileName(this, tr("Save class list file"), QFileInfo(_datasetIt.key()).absoluteDir().absolutePath(), tr("Darknet class list file (*.txt *.names)"));
+    if (classNameFilePath.isEmpty())
+    {
+        QMessageBox::warning(this, "Warning", "Since you reject selecting file for saving class names, it will not be saved!");
+        return;
+    }
+    qDebug() << _classesList;
+    auto classesList = _classesList.keys();
+    std::sort(classesList.begin(), classesList.end(), [&](auto const& left, auto const& right) {
+        return _classesList.find(left)->toList()[0] < _classesList.find(right)->toList()[0];
+    });
+    qDebug() << classesList;
+    auto classesFile = QFile(classNameFilePath);
+    if (classesFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        QTextStream out(&classesFile);
+        for (auto const& classItem : classesList)
+        {
+            out << classItem << '\n';
+        }
+    }
 }
 
 void MainWindow::on_pushButton_remove_clicked()
 {
-// TODO: Should be adopted
-#if 0
-   QFile::remove(m_imgList.at(m_imgIndex));
+   QFile::remove(_datasetIt.key());
+   QFile::remove(toTxtExtention(_datasetIt.key()));
+   _datasetIt = _datasetList.erase(_datasetIt);
+   setCurrentImg();
 
-   // TODO: Text file should not be created every time all info should be stored in the json
-   QString qstrOutputLabelData = get_labeling_data(m_imgList.at(m_imgIndex));
-   QFile::remove(qstrOutputLabelData);
+   //m_imgList.removeAt(m_imgIndex);
+   //if(m_imgIndex == m_imgList.size())
+   //{
+   //   m_imgIndex--;
+   //   setCurrentImg(m_imgIndex);
+   //}
 
-   m_imgList.removeAt(m_imgIndex);
-
-   if(m_imgIndex == m_imgList.size())
-   {
-      m_imgIndex--;
-      setCurrentImg(m_imgIndex);
-   }
-
-   updateButtonEnabling(!m_imgList.isEmpty());
-#endif
+   updateButtonEnabling(!_datasetList.isEmpty());
 }
 
 void MainWindow::on_tableWidget_label_cellDoubleClicked(int row, int column)
@@ -180,6 +201,8 @@ void MainWindow::on_tableWidget_label_cellDoubleClicked(int row, int column)
         it->setValue(classBoxes);
       }
       _datasetProject.set("dataset_list", _datasetList);
+
+      ui->label_image->loadClassBoxes(_datasetIt);
 
       ui->tableWidget_label->item(row, 0)->setText(newClassName);
     }
@@ -464,7 +487,7 @@ void MainWindow::initTableWidgetContextMenuSetup()
                   QList<QVariant> classData;
                   classData.push_back(lastRowIndex);
                   classData.push_back(static_cast<int>(classNameColor.rgba()));
-                  _classesList[newClassName] = static_cast<int>(classNameColor.rgba());
+                  _classesList[newClassName] = classData;
                   _classesIt = _classesList.find(newClassName);
                   _datasetProject.set("class_names_list", _classesList);
 
@@ -524,6 +547,13 @@ void MainWindow::loadClassNameList()
         return;
     }
     ui->label_image->setFocusObjectLabel(_classesIt.key());
+
+    updateClassesTable();
+}
+
+void MainWindow::updateClassesTable()
+{
+    qDebug() << _classesList.size();
     ui->tableWidget_label->setRowCount(_classesList.size());
     for (auto it = _classesList.begin(); it != _classesList.end(); ++it)
     {
@@ -555,6 +585,7 @@ void MainWindow::loadDatasetList()
         }
         return data;
     });
+    updateClassesTable();
     _datasetIt = _datasetList.begin();
     ui->label_image->loadClassBoxes(_datasetIt);
 }
