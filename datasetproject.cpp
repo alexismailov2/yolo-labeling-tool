@@ -89,9 +89,14 @@ bool DatasetProject::loadFromFile(const QString &filePath)
 }
 
 auto DatasetProject::get(QString&& key, std::function<QVariantMap()>&& defaultGetter) -> QVariantMap
-{
-    auto const data = _impl->get(std::move(key));
-    return (!data.isEmpty()) ? data : defaultGetter();
+{                            
+    auto data = _impl->get(std::move(key));
+    if (data.isEmpty())
+    {
+        data = defaultGetter();
+        set("dataset_list", data);
+    }
+    return data;
 }
 
 void DatasetProject::set(QString&& key, QVariantMap const& data)

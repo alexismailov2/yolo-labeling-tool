@@ -52,6 +52,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
   connect(ui->label_image, &BoundingBoxSelector::datasetIteratorUpdated, this, &MainWindow::datasetIteratorUpdated);
 
+  init();
   initTableWidget();
 }
 
@@ -410,6 +411,8 @@ void MainWindow::updateButtonEnabling(bool isEnabled)
   ui->pushButton_prev->setEnabled(isEnabled);
   ui->pushButton_save->setEnabled(isEnabled);
   ui->pushButton_remove->setEnabled(isEnabled);
+  ui->tableWidget_label->setEnabled(isEnabled);
+  ui->label_image->setEnabled(isEnabled);
 }
 
 void MainWindow::updateDatasetNavigator()
@@ -488,7 +491,6 @@ void MainWindow::initTableWidgetContextMenuSetup()
 void MainWindow::initTableWidget()
 {
   ui->tableWidget_label->horizontalHeader()->setVisible(true);
-  ui->tableWidget_label->horizontalHeader()->setStyleSheet("");
   ui->tableWidget_label->horizontalHeader()->setStretchLastSection(true);
 
   disconnect(ui->tableWidget_label->horizontalHeader(), SIGNAL(sectionPressed(int)),ui->tableWidget_label, SLOT(selectColumn(int)));
