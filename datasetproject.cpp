@@ -19,9 +19,8 @@ namespace {
             jsonObjectProject = QJsonDocument::fromJson(projectFile.readAll(), &parseError).object();
             if (parseError.error)
             {
-                throw std::runtime_error(parseError.errorString().toStdString());
+                qDebug() << "File " << filePath << " is empty, return an empty object";
             }
-            projectFile.close();
         }
         return jsonObjectProject;
     }
@@ -45,7 +44,6 @@ public:
       : _projectFilePath{filePath}
       , _projectJsonObject{loadJsonObjectFromFile(_projectFilePath)}
     {
-
     }
 
     ~Impl()
@@ -56,12 +54,12 @@ public:
         }
     }
 
-    auto get(QString&& key) -> QVariantMap
+    auto get(QString const& key) -> QVariantMap
     {
         return _projectJsonObject[key].toObject().toVariantMap();
     }
 
-    void set(QString&& key, QVariantMap const& data)
+    void set(QString const& key, QVariantMap const& data)
     {
         _projectJsonObject[key] = QJsonObject::fromVariantMap(data);
     }
@@ -74,32 +72,23 @@ private:
 DatasetProject::DatasetProject() = default;
 DatasetProject::~DatasetProject() = default;
 
-bool DatasetProject::loadFromFile(const QString &filePath)
+void DatasetProject::loadFromFile(const QString &filePath)
 {
-    try
-    {
-        _impl = std::make_unique<Impl>(filePath);
-    }
-    catch (std::runtime_error const& ex)
-    {
-        qDebug() << ex.what();
-        return false;
-    }
-    return true;
+    _impl = std::make_unique<Impl>(filePath);
 }
 
-auto DatasetProject::get(QString&& key, std::function<QVariantMap()>&& defaultGetter) -> QVariantMap
-{                            
-    auto data = _impl->get(std::move(key));
+auto DatasetProject::get(QString const& key, std::function<QVariantMap()>&& defaultGetter) -> QVariantMap
+{
+    auto data = _impl->get(key);
     if (data.isEmpty())
     {
         data = defaultGetter();
-        set("dataset_list", data);
+        set(key, data);
     }
     return data;
 }
 
-void DatasetProject::set(QString&& key, QVariantMap const& data)
+void DatasetProject::set(QString const& key, QVariantMap const& data)
 {
-    _impl->set(std::move(key), data);
+    _impl->set(key, data);
 }

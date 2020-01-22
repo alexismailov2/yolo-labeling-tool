@@ -54,7 +54,7 @@ public:
     void setClasses(QVariantMap* classes);
     void clearAllClassBoxex();
 
-    void importClassBoxesFromAnnotationFile(QString const&, QStringList const&);
+    auto importClassBoxesFromAnnotationFile(QString const&, QVariantMap&) -> QVariantMap;
     void exportClassBoxesToAnnotationFile(QVariantMap::iterator, QStringList const&) const;
 
 private:

@@ -163,10 +163,23 @@ void MainWindow::on_tableWidget_label_cellDoubleClicked(int row, int column)
     auto newClassName = QInputDialog::getText(this, "Rename class", "Class name:", QLineEdit::Normal,  ui->tableWidget_label->item(row, 0)->text(), &isAccepted, Qt::Dialog);
     if (isAccepted && !newClassName.isEmpty())
     {
-      _classesList.remove(ui->tableWidget_label->item(row, 0)->text());
-      _classesList[newClassName] = static_cast<int>(ui->tableWidget_label->item(row, 1)->backgroundColor().rgba());
+      // TODO: Should be moved to datasetProject class
+      auto const oldClassName = ui->tableWidget_label->item(row, 0)->text();
+      _classesList.remove(oldClassName);
+      QList<QVariant> classData;
+      classData.push_back(row);
+      classData.push_back(static_cast<int>(ui->tableWidget_label->item(row, 1)->backgroundColor().rgba()));
+      _classesList[newClassName] = classData;
       _classesIt = _classesList.find(newClassName);
       _datasetProject.set("class_names_list", _classesList);
+
+      for (auto it = _datasetList.begin(); it != _datasetList.end(); ++it)
+      {
+        auto classBoxes = it->toMap();
+        classBoxes[newClassName] = classBoxes.take(oldClassName);
+        it->setValue(classBoxes);
+      }
+      _datasetProject.set("dataset_list", _datasetList);
 
       ui->tableWidget_label->item(row, 0)->setText(newClassName);
     }
@@ -176,8 +189,12 @@ void MainWindow::on_tableWidget_label_cellDoubleClicked(int row, int column)
     auto color = QColorDialog::getColor(Qt::white, nullptr, "Set Label Color");
     if(color.isValid())
     {
+      // TODO: Should be moved to datasetProject class
       auto const className = ui->tableWidget_label->item(row, 0)->text();
-      _classesList[className] = static_cast<int>(color.rgba());
+      QList<QVariant> classData;
+      classData.push_back(row);
+      classData.push_back(static_cast<int>(color.rgba()));
+      _classesList[className] = classData;
       _classesIt = _classesList.find(className);
       _datasetProject.set("class_names_list", _classesList);
 
@@ -375,36 +392,6 @@ bool MainWindow::openVideos()
   return true;
 }
 
-void MainWindow::loadClassNameList()
-{
-    ui->tableWidget_label->clear();
-
-    _classesList = _datasetProject.get("class_names_list");
-    _classesIt = _classesList.begin();
-    ui->label_image->setClasses(&_classesList);
-    if (_classesList.isEmpty())
-    {
-        return;
-    }
-    ui->label_image->setFocusObjectLabel(_classesIt.key());
-    for (auto it = _classesList.begin(); it != _classesList.end(); ++it)
-    {
-        auto className = it.key();
-        auto classNameColor = QColor::fromRgba(static_cast<uint32_t>(it->toInt()));
-        qDebug() << className << ", " << classNameColor;
-
-        auto const lastRowIndex = ui->tableWidget_label->rowCount();
-        ui->tableWidget_label->insertRow(lastRowIndex);
-
-        ui->tableWidget_label->setItem(lastRowIndex, 0, new QTableWidgetItem(className));
-        ui->tableWidget_label->item(lastRowIndex, 0)->setFlags(ui->tableWidget_label->item(lastRowIndex, 0)->flags() ^ Qt::ItemIsEditable);
-
-        ui->tableWidget_label->setItem(lastRowIndex, 1, new QTableWidgetItem(""));
-        ui->tableWidget_label->item(lastRowIndex, 1)->setBackgroundColor(classNameColor);
-        ui->tableWidget_label->item(lastRowIndex, 1)->setFlags(ui->tableWidget_label->item(lastRowIndex, 1)->flags() ^ Qt::ItemIsEditable ^ Qt::ItemIsSelectable);
-    }
-}
-
 void MainWindow::updateButtonEnabling(bool isEnabled)
 {
   ui->pushButton_next->setEnabled(isEnabled);
@@ -474,9 +461,14 @@ void MainWindow::initTableWidgetContextMenuSetup()
 
                   // TODO: May be should be set iterator _classesIt instead
                   ui->label_image->setFocusObjectLabel(newClassName);
+                  QList<QVariant> classData;
+                  classData.push_back(lastRowIndex);
+                  classData.push_back(static_cast<int>(classNameColor.rgba()));
                   _classesList[newClassName] = static_cast<int>(classNameColor.rgba());
                   _classesIt = _classesList.find(newClassName);
                   _datasetProject.set("class_names_list", _classesList);
+
+                  //ui->label_image->setClasses(&_classesList);
               }
               break;
           }
@@ -498,13 +490,68 @@ void MainWindow::initTableWidget()
   initTableWidgetContextMenuSetup();
 }
 
+void MainWindow::loadClassNameList()
+{
+    ui->tableWidget_label->clear();
+
+    _classesList = _datasetProject.get("class_names_list", [&]() -> QVariantMap {
+        QVariantMap data;
+        auto classesFilePath = QFileDialog::getOpenFileName(this, tr("Open class list file"), "./", tr("Darknet class list file (*.txt *.names)"));
+        if (!classesFilePath.isEmpty())
+        {
+            auto classesFile = QFile(classesFilePath);
+            if (classesFile.open(QIODevice::ReadOnly))
+            {
+                auto classIndex = 0;
+                auto in = QTextStream(&classesFile);
+                while (!in.atEnd())
+                {
+                    QList<QVariant> classData;
+                    classData.push_back(classIndex++);
+                    classData.push_back(-1); // White color with alpha 255
+                    data[in.readLine()] = classData;
+                    qDebug() << classData;
+                }
+            }
+        }
+        return data;
+    });
+
+    _classesIt = _classesList.begin();
+    ui->label_image->setClasses(&_classesList);
+    if (_classesList.isEmpty())
+    {
+        return;
+    }
+    ui->label_image->setFocusObjectLabel(_classesIt.key());
+    ui->tableWidget_label->setRowCount(_classesList.size());
+    for (auto it = _classesList.begin(); it != _classesList.end(); ++it)
+    {
+        auto const className = it.key();
+        auto const classData = it->toList();
+        // TODO: Should be fixed classData if wrong
+        auto const classNameColor = (classData.size() == 2)
+            ? QColor::fromRgba(static_cast<uint32_t>(classData[1].toInt()))
+            : QColor(255, 255, 255, 255);
+        auto const rowIndex = classData[0].toInt();
+        qDebug() << className << ", " << rowIndex << ", " << classNameColor;
+
+        ui->tableWidget_label->setItem(rowIndex, 0, new QTableWidgetItem(className));
+        ui->tableWidget_label->item(rowIndex, 0)->setFlags(ui->tableWidget_label->item(rowIndex, 0)->flags() ^ Qt::ItemIsEditable);
+
+        ui->tableWidget_label->setItem(rowIndex, 1, new QTableWidgetItem(""));
+        ui->tableWidget_label->item(rowIndex, 1)->setBackgroundColor(classNameColor);
+        ui->tableWidget_label->item(rowIndex, 1)->setFlags(ui->tableWidget_label->item(rowIndex, 1)->flags() ^ Qt::ItemIsEditable ^ Qt::ItemIsSelectable);
+    }
+}
+
 void MainWindow::loadDatasetList()
 {
     _datasetList = _datasetProject.get("dataset_list", [&]() -> QVariantMap {
         QVariantMap data;
         for (auto const& item : openDatasetDir(this))
         {
-            data[item] = {};
+            data[item] = ui->label_image->importClassBoxesFromAnnotationFile(item, _classesList);
         }
         return data;
     });

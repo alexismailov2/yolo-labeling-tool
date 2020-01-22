@@ -13,10 +13,10 @@ public:
     DatasetProject(DatasetProject&&) noexcept = default;
     DatasetProject& operator=(DatasetProject&&) noexcept = default;
 
-    bool loadFromFile(QString const& filePath);
+    void loadFromFile(QString const& filePath);
 
-    auto get(QString&& key, std::function<QVariantMap()>&& defaultGetter = []() -> QVariantMap { return {}; }) -> QVariantMap;
-    void set(QString&& key, QVariantMap const& data);
+    auto get(QString const& key, std::function<QVariantMap()>&& defaultGetter = []() -> QVariantMap { return {}; }) -> QVariantMap;
+    void set(QString const& key, QVariantMap const& data);
 
 private:
     class Impl;

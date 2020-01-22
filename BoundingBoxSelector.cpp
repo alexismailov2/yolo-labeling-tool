@@ -8,6 +8,7 @@
 #include <QJsonArray>
 
 #include <cmath>
+#include <iomanip>
 
 namespace {
     auto toAbsolute(QPointF const& in, QSize const& size) noexcept -> QPoint
@@ -60,9 +61,10 @@ namespace {
 
         for (auto const& boundingbox : boundingBoxes)
         {
-            auto const color = (classes.contains(boundingbox.label))
-                                   ? QColor::fromRgba(static_cast<uint32_t>(classes[boundingbox.label].toInt()))
-                                   : QColor::fromRgb(0, 0, 0);
+            auto const color = ((classes.contains(boundingbox.label)) && (classes[boundingbox.label].toList().size() == 2))
+                                   ? QColor::fromRgba(static_cast<uint32_t>(classes[boundingbox.label].toList()[1].toInt()))
+                                   : QColor(0, 0, 0, 255);
+            qDebug() << boundingbox.label << ", " << color;
             pen.setColor((boundingbox.focused) ? Qt::magenta : color);
             drawObjectBox(painter, pen, toAbsolute(boundingbox.box, size));
         }
@@ -371,9 +373,10 @@ void BoundingBoxSelector::clearAllClassBoxex()
     showImage();
 }
 
-void BoundingBoxSelector::importClassBoxesFromAnnotationFile(QString const& labelFilePath, QStringList const& orderedClassNamesList)
+auto BoundingBoxSelector::importClassBoxesFromAnnotationFile(QString const& labelFilePath, QVariantMap& classList) -> QVariantMap
 {
-    std::ifstream inputFile(labelFilePath.toStdString());
+    QVariantMap classBoxesData;
+    std::ifstream inputFile(toTxtExtention(labelFilePath).toStdString());
     if(inputFile.is_open())
     {
         qreal inputFileValue;
@@ -387,21 +390,36 @@ void BoundingBoxSelector::importClassBoxesFromAnnotationFile(QString const& labe
         {
             try
             {
+                auto classIndex = static_cast<int>(inputFileValues.at(i));
                 qreal width = inputFileValues.at(i + 3);
                 qreal height = inputFileValues.at(i + 4);
                 qreal x = inputFileValues.at(i + 1) - width/2.;
                 qreal y = inputFileValues.at(i + 2) - height/2.;
-                m_objBoundingBoxes.push_back({orderedClassNamesList[static_cast<int>(inputFileValues.at(i))],
-                                              QRectF{x, y, width, height},
-                                              false});
 
+                auto found = std::find_if(classList.cbegin(), classList.cend(), [&](auto const& item) {
+                  return item.toList()[0] == static_cast<int>(inputFileValues.at(i));
+                });
+                auto className = (found != classList.cend()) ? found.key() : QString::number(classIndex);
+                if (found != classList.cend())
+                {
+                    QList<QVariant> classData;
+                    classData.push_back(classIndex);
+                    classData.push_back(-1);
+                    classList[className] = classData;
+                }
+                m_objBoundingBoxes.push_back({className, QRectF{x, y, width, height}, false});
+
+                auto boxesList = classBoxesData[className].toList();
+                boxesList.push_back(QList<QVariant>{x, y, width, height});
+                classBoxesData[className] = boxesList;
+#if 0
                 // Adding box to _datasetIt
                 auto data = _datasetIt->toMap();
                 auto boxesList = data[_focusedClassName].toList();
                 boxesList.push_back(QList<QVariant>{x, y, width, height});
                 data[_focusedClassName] = boxesList;
                 _datasetIt->setValue(data);
-
+#endif
                 //emit datasetIteratorUpdated();
             }
             catch (std::out_of_range const& e)
@@ -410,9 +428,10 @@ void BoundingBoxSelector::importClassBoxesFromAnnotationFile(QString const& labe
             }
         }
     }
+    return classBoxesData;
 }
 
-// TODO: Should be moved to static function of this class or movexd to datasetproject
+// TODO: Should be moved to static function of this class or moved to datasetproject
 void BoundingBoxSelector::exportClassBoxesToAnnotationFile(QVariantMap::iterator datasetIt, QStringList const& orderedClassNamesList) const
 {
     std::ofstream annotationFile(toTxtExtention(datasetIt.key()).toStdString());
