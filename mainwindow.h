@@ -32,44 +32,34 @@ private slots:
     void on_pushButtonOpenProject_clicked();
     void on_pushButton_save_clicked();
     void on_pushButton_remove_clicked();
-
     void on_pushButton_prev_clicked();
     void on_pushButton_next_clicked();
-
-    void keyPressEvent(QKeyEvent *);
-
-    void setNextImage();
-    void setPreviousImage();
-    void clear_label_data();
-
-    void nextClass();
-    void prevClass();
-
     void on_tableWidget_label_cellDoubleClicked(int , int );
     void on_tableWidget_label_cellClicked(int , int );
-
     void on_horizontalSlider_images_sliderMoved(int );
 
+    void clearAllClassBoxes();
+    void nextClass();
+    void prevClass();
     void datasetIteratorUpdated();
 
 protected:
     void wheelEvent(QWheelEvent*);
+    void keyPressEvent(QKeyEvent *);
 
 private:
     void init();
     void initTableWidget();
     void initTableWidgetContextMenuSetup();
 
+    void setNextImage();
+    void setPreviousImage();
+    void setCurrentImg();
+
     void updateButtonEnabling(bool isEnabled);
     void updateDatasetNavigator();
 
     bool openVideos();
-    void img_open(const int);
-
-    void setCurrentImg();
-
-    void load_label_list_data(QString);
-    auto get_labeling_data(QString) const -> QString;
 
     void updateCurrentClass();
     void updateClassesTable();
@@ -78,15 +68,13 @@ private:
     void loadDatasetList();
     void exportClassListToFile();
 
-    Ui::MainWindow*        ui;
+    Ui::MainWindow*        _ui;
     // TODO: May be it should be stored in the datasetproject source
     QVariantMap            _datasetList;
     QVariantMap::iterator  _datasetIt;
     QVariantMap            _classesList;
     QVariantMap::iterator  _classesIt;
 
-    QProcess*              m_SlicingDatasetProcess{};
-    QProgressDialog*       m_progressDialog{};
     DatasetProject         _datasetProject;
 };
 

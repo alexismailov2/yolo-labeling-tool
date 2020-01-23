@@ -37,20 +37,19 @@ namespace {
 
 MainWindow::MainWindow(QWidget *parent) :
   QMainWindow(parent),
-  ui(new Ui::MainWindow)
+  _ui(new Ui::MainWindow)
 {
-  ui->setupUi(this);
+  _ui->setupUi(this);
 
-  connect(new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_S), this), SIGNAL(activated()), this, SLOT(save_label_data()));
-  connect(new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_C), this), SIGNAL(activated()), this, SLOT(clear_label_data()));
+  connect(new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_S), this), &QShortcut::activated, this, &MainWindow::on_pushButton_save_clicked);
+  connect(new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_C), this), &QShortcut::activated, this, &MainWindow::clearAllClassBoxes);
+  connect(new QShortcut(QKeySequence(Qt::Key_S), this),            &QShortcut::activated, this, &MainWindow::nextClass);
+  connect(new QShortcut(QKeySequence(Qt::Key_W), this),            &QShortcut::activated, this, &MainWindow::prevClass);
+  connect(new QShortcut(QKeySequence(Qt::Key_A), this),            &QShortcut::activated, this, &MainWindow::on_pushButton_prev_clicked);
+  connect(new QShortcut(QKeySequence(Qt::Key_D), this),            &QShortcut::activated, this, &MainWindow::on_pushButton_next_clicked);
+  connect(new QShortcut(QKeySequence(Qt::Key_Space), this),        &QShortcut::activated, this, &MainWindow::on_pushButton_next_clicked);
 
-  connect(new QShortcut(QKeySequence(Qt::Key_S), this), SIGNAL(activated()), this, SLOT(nextClass()));
-  connect(new QShortcut(QKeySequence(Qt::Key_W), this), SIGNAL(activated()), this, SLOT(prevClass()));
-  connect(new QShortcut(QKeySequence(Qt::Key_A), this), SIGNAL(activated()), this, SLOT(setPreviousImage()));
-  connect(new QShortcut(QKeySequence(Qt::Key_D), this), SIGNAL(activated()), this, SLOT(setNextImage()));
-  connect(new QShortcut(QKeySequence(Qt::Key_Space), this), SIGNAL(activated()), this, SLOT(setNextImage()));
-
-  connect(ui->label_image, &BoundingBoxSelector::datasetIteratorUpdated, this, &MainWindow::datasetIteratorUpdated);
+  connect(_ui->label_image, &BoundingBoxSelector::datasetIteratorUpdated, this, &MainWindow::datasetIteratorUpdated);
 
   init();
   initTableWidget();
@@ -58,7 +57,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-  delete ui;
+  delete _ui;
 }
 
 void MainWindow::on_pushButton_create_from_video_clicked()
@@ -81,16 +80,26 @@ void MainWindow::on_pushButtonOpenProject_clicked()
     init();
 }
 
-void MainWindow::wheelEvent(QWheelEvent *ev)
+void MainWindow::on_pushButton_save_clicked()
 {
-    if (ev->delta() > 0)
-    {
-       setPreviousImage(); // up Wheel
-    }
-    else if(ev->delta() < 0)
-    {
-       setNextImage(); //down Wheel
-    }
+   exportClassListToFile();
+   for (auto it = _datasetList.begin(); it != _datasetList.end(); ++it)
+   {
+       _ui->label_image->exportClassBoxesToAnnotationFile(it, _classesList);
+   }
+}
+
+void MainWindow::on_pushButton_remove_clicked()
+{
+   QFile::remove(_datasetIt.key());
+   QFile::remove(toTxtExtention(_datasetIt.key()));
+   _datasetIt = _datasetList.erase(_datasetIt);
+   if (!_datasetList.isEmpty() && (_datasetIt == _datasetList.end()))
+   {
+       --_datasetIt;
+   }
+   setCurrentImg();
+   updateButtonEnabling(!_datasetList.isEmpty());
 }
 
 void MainWindow::on_pushButton_prev_clicked()
@@ -103,19 +112,126 @@ void MainWindow::on_pushButton_next_clicked()
    setNextImage();
 }
 
-void MainWindow::keyPressEvent(QKeyEvent * event)
+void MainWindow::on_tableWidget_label_cellDoubleClicked(int row, int column)
 {
-   int  nKey                    = event->key();
-   bool graveAccentKeyIsPressed = (nKey == Qt::Key_QuoteLeft);
-   bool numKeyIsPressed         = (nKey >= Qt::Key_0 && nKey <= Qt::Key_9 );
+  switch(column)
+  {
+  case 0: {
+    bool isAccepted{};
+    auto newClassName = QInputDialog::getText(this, "Rename class", "Class name:", QLineEdit::Normal,  _ui->tableWidget_label->item(row, 0)->text(), &isAccepted, Qt::Dialog);
+    if (isAccepted && !newClassName.isEmpty())
+    {
+      // TODO: Should be moved to datasetProject class
+      auto const oldClassName = _ui->tableWidget_label->item(row, 0)->text();
+      _classesList.remove(oldClassName);
+      QList<QVariant> classData;
+      classData.push_back(row);
+      classData.push_back(static_cast<int>(_ui->tableWidget_label->item(row, 1)->backgroundColor().rgba()));
+      _classesList[newClassName] = classData;
+      _classesIt = _classesList.find(newClassName);
+      _datasetProject.set("class_names_list", _classesList);
 
-   if(graveAccentKeyIsPressed)
+      for (auto it = _datasetList.begin(); it != _datasetList.end(); ++it)
+      {
+        auto classBoxes = it->toMap();
+        classBoxes[newClassName] = classBoxes.take(oldClassName);
+        it->setValue(classBoxes);
+      }
+      _datasetProject.set("dataset_list", _datasetList);
+
+      _ui->label_image->loadClassBoxes(_datasetIt);
+
+      _ui->tableWidget_label->item(row, 0)->setText(newClassName);
+    }
+    break;
+  }
+  case 1: {
+    auto color = QColorDialog::getColor(Qt::white, nullptr, "Set Label Color");
+    if(color.isValid())
+    {
+      // TODO: Should be moved to datasetProject class
+      auto const className = _ui->tableWidget_label->item(row, 0)->text();
+      QList<QVariant> classData;
+      classData.push_back(row);
+      classData.push_back(static_cast<int>(color.rgba()));
+      _classesList[className] = classData;
+      _classesIt = _classesList.find(className);
+      _datasetProject.set("class_names_list", _classesList);
+
+      _ui->tableWidget_label->item(row, 1)->setBackgroundColor(color);
+    }
+    break;
+  }
+  default:
+    break;
+  }
+  updateCurrentClass();
+  _ui->label_image->showImage();
+}
+
+void MainWindow::on_tableWidget_label_cellClicked(int row, int column)
+{
+   Q_UNUSED(column)
+   _classesIt = std::next(_classesList.begin(), row);
+   updateCurrentClass();
+}
+
+void MainWindow::on_horizontalSlider_images_sliderMoved(int position)
+{
+    _datasetIt = std::next(_datasetList.begin(), position);
+   setCurrentImg();
+}
+
+void MainWindow::clearAllClassBoxes()
+{
+    _ui->label_image->clearAllClassBoxex();
+}
+
+void MainWindow::nextClass()
+{
+    if (_classesIt != _classesList.end())
+    {
+        ++_classesIt;
+    }
+    updateCurrentClass();
+}
+
+void MainWindow::prevClass()
+{
+    if (_classesIt != _classesList.begin())
+    {
+        --_classesIt;
+    }
+    updateCurrentClass();
+}
+
+// TODO: All logic for working with _datasetList and _classesList should be moved to DatasetProject class
+void MainWindow::datasetIteratorUpdated()
+{
+    _datasetProject.set("dataset_list", _datasetList);
+}
+
+void MainWindow::wheelEvent(QWheelEvent* ev)
+{
+    if (ev->delta() > 0)
+    {
+       setPreviousImage(); // up Wheel
+    }
+    else if(ev->delta() < 0)
+    {
+       setNextImage(); //down Wheel
+    }
+}
+
+void MainWindow::keyPressEvent(QKeyEvent* event)
+{
+   if(event->key() == Qt::Key_QuoteLeft)
    {
       updateCurrentClass();
    }
-   else if(numKeyIsPressed)
+   else if ((event->key() >= Qt::Key_0) && (event->key() <= Qt::Key_9))
    {
-      int asciiToNumber = nKey - Qt::Key_0;
+      int const asciiToNumber = event->key() - Qt::Key_0;
       if (asciiToNumber < _classesList.size())
       {
          _classesIt = std::next(_classesList.begin(), asciiToNumber);
@@ -124,13 +240,322 @@ void MainWindow::keyPressEvent(QKeyEvent * event)
    }
 }
 
-void MainWindow::on_pushButton_save_clicked()
+void MainWindow::init()
 {
-   exportClassListToFile();
-   for (auto it = _datasetList.begin(); it != _datasetList.end(); ++it)
-   {
-       ui->label_image->exportClassBoxesToAnnotationFile(it, _classesList);
-   }
+    _ui->label_image->init();
+
+    updateButtonEnabling(!_datasetList.isEmpty());
+    updateDatasetNavigator();
+
+    _classesIt = _classesList.begin();
+    updateCurrentClass();
+
+    _datasetIt = _datasetList.begin();
+    setCurrentImg();
+}
+
+void MainWindow::initTableWidget()
+{
+  _ui->tableWidget_label->horizontalHeader()->setVisible(true);
+  _ui->tableWidget_label->horizontalHeader()->setStretchLastSection(true);
+
+  disconnect(_ui->tableWidget_label->horizontalHeader(), SIGNAL(sectionPressed(int)),_ui->tableWidget_label, SLOT(selectColumn(int)));
+
+  initTableWidgetContextMenuSetup();
+}
+
+void MainWindow::initTableWidgetContextMenuSetup()
+{
+  _ui->tableWidget_label->setContextMenuPolicy(Qt::CustomContextMenu);
+  QObject::connect(_ui->tableWidget_label, &QTableWidget::customContextMenuRequested, this, [this]() {
+      QMenu* menu = new QMenu;
+      auto addClass = menu->addAction("Add class");
+      auto point = _ui->tableWidget_label->mapFromGlobal(QCursor::pos() - QPoint{0, 25});
+      auto selectedItemPtr = _ui->tableWidget_label->itemAt(point);
+      if (selectedItemPtr)
+      {
+          auto removeClass = menu->addAction("Remove class");
+          QObject::connect(removeClass, &QAction::triggered, this, [this, menu, removeClass, selectedItemPtr]() {
+              _classesList.remove(selectedItemPtr->text());
+              _classesIt = _classesList.begin();
+              // TODO: May be should be set iterator _classesIt instead
+              _ui->label_image->setFocusObjectLabel(!_classesList.isEmpty() ? _classesIt.key() : "");
+              _datasetProject.set("class_names_list", _classesList);
+              _ui->tableWidget_label->removeRow(selectedItemPtr->row());
+              removeClass->deleteLater();
+              menu->deleteLater();
+          });
+      }
+      QObject::connect(addClass, &QAction::triggered, this, [this, menu, addClass]() {
+          bool isAccepted{};
+          while(true)
+          {
+              auto newClassName = QInputDialog::getText(this, "Create class", "Class name:", QLineEdit::Normal, "", &isAccepted, Qt::Dialog);
+              if (isAccepted && !newClassName.isEmpty())
+              {
+                  if (_classesList.contains(newClassName))
+                  {
+                      // TODO: May be should be dialog box shown.
+                      qDebug() << "The class with name " << newClassName << " has already exist, try again";
+                      continue;
+                  }
+                  auto const lastRowIndex = _ui->tableWidget_label->rowCount();
+                  auto classNameColor = QColor(QColor::colorNames().first());
+                  qDebug() << newClassName << ", " << lastRowIndex << ", " << classNameColor;
+
+                  _ui->tableWidget_label->insertRow(lastRowIndex);
+
+                  _ui->tableWidget_label->setItem(lastRowIndex, 0, new QTableWidgetItem(newClassName));
+                  _ui->tableWidget_label->item(lastRowIndex, 0)->setFlags(_ui->tableWidget_label->item(lastRowIndex, 0)->flags() ^ Qt::ItemIsEditable);
+
+                  _ui->tableWidget_label->setItem(lastRowIndex, 1, new QTableWidgetItem(""));
+                  _ui->tableWidget_label->item(lastRowIndex, 1)->setBackgroundColor(classNameColor);
+                  _ui->tableWidget_label->item(lastRowIndex, 1)->setFlags(_ui->tableWidget_label->item(lastRowIndex, 1)->flags() ^ Qt::ItemIsEditable ^ Qt::ItemIsSelectable);
+
+                  // TODO: May be should be set iterator _classesIt instead
+                  _ui->label_image->setFocusObjectLabel(newClassName);
+                  QList<QVariant> classData;
+                  classData.push_back(lastRowIndex);
+                  classData.push_back(static_cast<int>(classNameColor.rgba()));
+                  _classesList[newClassName] = classData;
+                  _classesIt = _classesList.find(newClassName);
+                  _datasetProject.set("class_names_list", _classesList);
+
+                  //ui->label_image->setClasses(&_classesList);
+              }
+              break;
+          }
+          addClass->deleteLater();
+          menu->deleteLater();
+      });
+      menu->exec(QCursor::pos());
+      menu->clear();
+  });
+}
+
+void MainWindow::setCurrentImg()
+{
+    if (_datasetList.isEmpty())
+    {
+        return;
+    }
+    if (!_ui->label_image->openImage(_datasetIt.key()))
+    {
+        // TODO: Should be shown message box
+        qDebug() << "Could not open file";
+        return;
+    }
+    // TODO: May be more convinient to pass iterator to current dataset
+    _ui->label_image->loadClassBoxes(_datasetIt);
+    _ui->label_image->showImage();
+    _ui->label_progress->setText(QString::number(std::distance(_datasetList.begin(), _datasetIt)) + " / " + QString::number(_datasetList.size() - 1));
+    _ui->label_file->setText("File: " + _datasetIt.key());
+    updateDatasetNavigator();
+}
+
+void MainWindow::setNextImage()
+{
+    if (std::next(_datasetIt) != _datasetList.end())
+    {
+        ++_datasetIt;
+    }
+    setCurrentImg();
+}
+
+void MainWindow::setPreviousImage()
+{
+    if (_datasetIt != _datasetList.begin())
+    {
+        --_datasetIt;
+    }
+    setCurrentImg();
+}
+
+void MainWindow::updateCurrentClass()
+{
+    if (!_classesList.isEmpty())
+    {
+        _ui->label_image->setFocusObjectLabel(_classesIt.key());
+        _ui->tableWidget_label->setCurrentCell(std::distance(_classesList.begin(), _classesIt), 0);
+    }
+}
+
+void MainWindow::updateClassesTable()
+{
+    qDebug() << _classesList.size();
+    _ui->tableWidget_label->setRowCount(_classesList.size());
+    for (auto it = _classesList.begin(); it != _classesList.end(); ++it)
+    {
+        auto const className = it.key();
+        auto const classData = it->toList();
+        // TODO: Should be fixed classData if wrong
+        auto const classNameColor = (classData.size() == 2)
+            ? QColor::fromRgba(static_cast<uint32_t>(classData[1].toInt()))
+            : QColor(255, 255, 255, 255);
+        auto const rowIndex = classData[0].toInt();
+        qDebug() << className << ", " << rowIndex << ", " << classNameColor;
+
+        _ui->tableWidget_label->setItem(rowIndex, 0, new QTableWidgetItem(className));
+        _ui->tableWidget_label->item(rowIndex, 0)->setFlags(_ui->tableWidget_label->item(rowIndex, 0)->flags() ^ Qt::ItemIsEditable);
+
+        _ui->tableWidget_label->setItem(rowIndex, 1, new QTableWidgetItem(""));
+        _ui->tableWidget_label->item(rowIndex, 1)->setBackgroundColor(classNameColor);
+        _ui->tableWidget_label->item(rowIndex, 1)->setFlags(_ui->tableWidget_label->item(rowIndex, 1)->flags() ^ Qt::ItemIsEditable ^ Qt::ItemIsSelectable);
+    }
+}
+
+bool MainWindow::openVideos()
+{
+  auto selectedFileList = QFileDialog::getOpenFileNames(this, "Select one or more files to open", "./", "Video (*.mp4 *.avi *.webm)");
+  if (!selectedFileList.isEmpty())
+  {
+      auto progressDialog = QProgressDialog("Slicing video process", "&Cancel", 0, 100);
+      progressDialog.setWindowModality(Qt::WindowModal);
+      progressDialog.setMinimumSize(400, 40);
+      progressDialog.setRange(0, 100);
+      progressDialog.setValue(0);
+
+      auto slicingDatasetProcess = QProcess{};
+
+      for (auto const& item : selectedFileList)
+      {
+        qDebug() << item;
+        auto workingDirectoryPath = QDir::currentPath() + "/" + QFileInfo(item).fileName().split(".")[0];
+        if (QDir().exists(workingDirectoryPath) || QDir().mkdir(workingDirectoryPath))
+        {
+          qDebug() << workingDirectoryPath;
+        }
+        else
+        {
+          qDebug() << "Could not create directory: " << workingDirectoryPath;
+        }
+    // TODO: Should be deleted after test
+    //    if (_slicingDatasetProcess == nullptr)
+    //    {
+    //        _slicingDatasetProcess = new QProcess(this);
+    //    }
+        slicingDatasetProcess.setWorkingDirectory(workingDirectoryPath);
+        QObject::connect(&slicingDatasetProcess, &QProcess::readyReadStandardError, [&]() {
+            static auto durationSeconds = 0;
+
+            auto toSeconds = [](std::string const& duration) {
+               return (((duration[0] - '0')*10 + duration[1] - '0')*60*60) + (((duration[3] - '0')*10 + duration[4] - '0')*60) + ((duration[6] - '0')*10 + duration[7] - '0');
+            };
+
+            std::string string = slicingDatasetProcess.readAllStandardError().toStdString();
+            auto durationStart = string.find("Duration: ");
+            if (durationStart != std::string::npos)
+            {
+               auto durationString = string.substr(durationStart + 10, 8);
+               durationSeconds = toSeconds(durationString);
+               qDebug() << "Duration: " << QString::fromStdString(durationString) << ", " << durationSeconds;
+            }
+            auto start = string.rfind("time=");
+            if (start != std::string::npos)
+            {
+               start += 5;
+               auto end = string.rfind("bitrate=");
+               if (end != std::string::npos)
+               {
+                  end -= 4;
+                  auto currentPosString = string.substr(start, end - start);
+                  auto currentPos = toSeconds(currentPosString);
+                  qDebug() << QString::fromStdString(currentPosString) << ", " << currentPos;
+                  progressDialog.setValue((currentPos * 100)/durationSeconds);
+               }
+            }
+        });
+        QObject::connect(&slicingDatasetProcess, static_cast<void(QProcess::*)(int)>(&QProcess::finished), [&](){
+           progressDialog.close();
+        });
+        QStringList ffmpegArguments("-i");
+        ffmpegArguments << item << "-vf" << "fps=1" << "%06d.png";//jpg";
+        slicingDatasetProcess.start("/usr/local/bin/ffmpeg", ffmpegArguments);
+    // TODO: Should be deleted after test
+    //    if (_progressDialog == nullptr)
+    //    {
+    //      _progressDialog = new QProgressDialog("Slicing video process", "&Cancel", 0, 100);
+    //      _progressDialog->setWindowModality(Qt::WindowModal);
+    //      _progressDialog->setMinimumSize(400, 40);
+    //      _progressDialog->setRange(0, 100);
+    //      _progressDialog->setValue(0);
+    //    }
+
+        progressDialog.setLabelText(QString("Slicing video %1 to dataset").arg(item));
+
+        auto isCanceled = false;
+        QObject::connect(&progressDialog, &QProgressDialog::canceled, [&]() {
+            isCanceled = true;
+            slicingDatasetProcess.terminate();
+        });
+        progressDialog.exec();
+        qDebug() << "Result of process: " << slicingDatasetProcess.waitForFinished();
+        if (isCanceled)
+        {
+            qDebug() << "Cancelled slicing process";
+            break;
+        }
+      }
+      return true;
+  }
+  return false;
+}
+
+void MainWindow::updateButtonEnabling(bool isEnabled)
+{
+  _ui->pushButton_next->setEnabled(isEnabled);
+  _ui->pushButton_prev->setEnabled(isEnabled);
+  _ui->pushButton_save->setEnabled(isEnabled);
+  _ui->pushButton_remove->setEnabled(isEnabled);
+  _ui->tableWidget_label->setEnabled(isEnabled);
+  _ui->label_image->setEnabled(isEnabled);
+}
+
+void MainWindow::updateDatasetNavigator()
+{
+  _ui->horizontalSlider_images->setEnabled(true);
+  _ui->horizontalSlider_images->setRange(0, _datasetList.size() - 1);
+  _ui->horizontalSlider_images->blockSignals(true);
+  _ui->horizontalSlider_images->setValue(std::distance(_datasetList.begin(), _datasetIt));
+  _ui->horizontalSlider_images->blockSignals(false);
+}
+
+void MainWindow::loadClassNameList()
+{
+    _ui->tableWidget_label->clear();
+
+    _classesList = _datasetProject.get("class_names_list", [&]() -> QVariantMap {
+        QVariantMap data;
+        auto classesFilePath = QFileDialog::getOpenFileName(this, tr("Open class list file"), "./", tr("Darknet class list file (*.txt *.names)"));
+        if (!classesFilePath.isEmpty())
+        {
+            auto classesFile = QFile(classesFilePath);
+            if (classesFile.open(QIODevice::ReadOnly))
+            {
+                auto classIndex = 0;
+                auto in = QTextStream(&classesFile);
+                while (!in.atEnd())
+                {
+                    QList<QVariant> classData;
+                    classData.push_back(classIndex++);
+                    classData.push_back(-1); // White color with alpha 255
+                    data[in.readLine()] = classData;
+                    qDebug() << classData;
+                }
+            }
+        }
+        return data;
+    });
+
+    _classesIt = _classesList.begin();
+    _ui->label_image->setClasses(&_classesList);
+    if (_classesList.isEmpty())
+    {
+        return;
+    }
+    _ui->label_image->setFocusObjectLabel(_classesIt.key());
+
+    updateClassesTable();
 }
 
 void MainWindow::exportClassListToFile()
@@ -158,439 +583,18 @@ void MainWindow::exportClassListToFile()
     }
 }
 
-void MainWindow::on_pushButton_remove_clicked()
-{
-   QFile::remove(_datasetIt.key());
-   QFile::remove(toTxtExtention(_datasetIt.key()));
-   _datasetIt = _datasetList.erase(_datasetIt);
-   setCurrentImg();
-
-   //m_imgList.removeAt(m_imgIndex);
-   //if(m_imgIndex == m_imgList.size())
-   //{
-   //   m_imgIndex--;
-   //   setCurrentImg(m_imgIndex);
-   //}
-
-   updateButtonEnabling(!_datasetList.isEmpty());
-}
-
-void MainWindow::on_tableWidget_label_cellDoubleClicked(int row, int column)
-{
-  switch(column)
-  {
-  case 0: {
-    bool isAccepted{};
-    auto newClassName = QInputDialog::getText(this, "Rename class", "Class name:", QLineEdit::Normal,  ui->tableWidget_label->item(row, 0)->text(), &isAccepted, Qt::Dialog);
-    if (isAccepted && !newClassName.isEmpty())
-    {
-      // TODO: Should be moved to datasetProject class
-      auto const oldClassName = ui->tableWidget_label->item(row, 0)->text();
-      _classesList.remove(oldClassName);
-      QList<QVariant> classData;
-      classData.push_back(row);
-      classData.push_back(static_cast<int>(ui->tableWidget_label->item(row, 1)->backgroundColor().rgba()));
-      _classesList[newClassName] = classData;
-      _classesIt = _classesList.find(newClassName);
-      _datasetProject.set("class_names_list", _classesList);
-
-      for (auto it = _datasetList.begin(); it != _datasetList.end(); ++it)
-      {
-        auto classBoxes = it->toMap();
-        classBoxes[newClassName] = classBoxes.take(oldClassName);
-        it->setValue(classBoxes);
-      }
-      _datasetProject.set("dataset_list", _datasetList);
-
-      ui->label_image->loadClassBoxes(_datasetIt);
-
-      ui->tableWidget_label->item(row, 0)->setText(newClassName);
-    }
-    break;
-  }
-  case 1: {
-    auto color = QColorDialog::getColor(Qt::white, nullptr, "Set Label Color");
-    if(color.isValid())
-    {
-      // TODO: Should be moved to datasetProject class
-      auto const className = ui->tableWidget_label->item(row, 0)->text();
-      QList<QVariant> classData;
-      classData.push_back(row);
-      classData.push_back(static_cast<int>(color.rgba()));
-      _classesList[className] = classData;
-      _classesIt = _classesList.find(className);
-      _datasetProject.set("class_names_list", _classesList);
-
-      ui->tableWidget_label->item(row, 1)->setBackgroundColor(color);
-    }
-    break;
-  }
-  default:
-    break;
-  }
-  updateCurrentClass();
-  ui->label_image->showImage();
-}
-
-void MainWindow::on_tableWidget_label_cellClicked(int row, int column)
-{
-   Q_UNUSED(column)
-   _classesIt = std::next(_classesList.begin(), row);
-   updateCurrentClass();
-}
-
-void MainWindow::on_horizontalSlider_images_sliderMoved(int position)
-{
-    _datasetIt = std::next(_datasetList.begin(), position);
-   setCurrentImg();
-}
-
-void MainWindow::clear_label_data()
-{
-    ui->label_image->clearAllClassBoxex();
-}
-
-void MainWindow::init()
-{
-    ui->label_image->init();
-
-    updateButtonEnabling(!_datasetList.isEmpty());
-    updateDatasetNavigator();
-
-    _classesIt = _classesList.begin();
-    updateCurrentClass();
-
-    _datasetIt = _datasetList.begin();
-    setCurrentImg();
-}
-
-void MainWindow::setCurrentImg()
-{
-    if (_datasetList.isEmpty())
-    {
-        return;
-    }
-    if (!ui->label_image->openImage(_datasetIt.key()))
-    {
-        // TODO: Should be shown message box
-        qDebug() << "Could not open file";
-        return;
-    }
-    // TODO: May be more convinient to pass iterator to current dataset
-    ui->label_image->loadClassBoxes(_datasetIt);
-    ui->label_image->showImage();
-    ui->label_progress->setText(QString::number(std::distance(_datasetList.begin(), _datasetIt)) + " / " + QString::number(_datasetList.size() - 1));
-    ui->label_file->setText("File: " + _datasetIt.key());
-    updateDatasetNavigator();
-}
-
-void MainWindow::setNextImage()
-{
-    if (std::next(_datasetIt) != _datasetList.end())
-    {
-        ++_datasetIt;
-    }
-    setCurrentImg();
-}
-
-void MainWindow::setPreviousImage()
-{
-    if (_datasetIt != _datasetList.begin())
-    {
-        --_datasetIt;
-    }
-    setCurrentImg();
-}
-
-void MainWindow::updateCurrentClass()
-{
-    if (!_classesList.isEmpty())
-    {
-        ui->label_image->setFocusObjectLabel(_classesIt.key());
-        ui->tableWidget_label->setCurrentCell(std::distance(_classesList.begin(), _classesIt), 0);
-    }
-}
-
-void MainWindow::nextClass()
-{
-    if (_classesIt != _classesList.end())
-    {
-        ++_classesIt;
-    }
-    updateCurrentClass();
-}
-
-void MainWindow::prevClass()
-{
-    if (_classesIt != _classesList.begin())
-    {
-        --_classesIt;
-    }
-    updateCurrentClass();
-}
-
-bool MainWindow::openVideos()
-{
-  auto selectedFileList = QFileDialog::getOpenFileNames(this, "Select one or more files to open", "./", "Video (*.mp4 *.avi *.webm)");
-
-  for (auto const& item : selectedFileList)
-  {
-    qDebug() << item;
-    auto workingDirectoryPath = QDir::currentPath() + "/" + QFileInfo(item).fileName().split(".")[0];
-    if (QDir().exists(workingDirectoryPath) || QDir().mkdir(workingDirectoryPath))
-    {
-      qDebug() << workingDirectoryPath;
-    }
-    else
-    {
-      qDebug() << "Could not create directory: " << workingDirectoryPath;
-    }
-
-    if (m_SlicingDatasetProcess == nullptr)
-    {
-        m_SlicingDatasetProcess = new QProcess(this);
-    }
-    m_SlicingDatasetProcess->setWorkingDirectory(workingDirectoryPath);
-    QObject::connect(m_SlicingDatasetProcess, &QProcess::readyReadStandardError, [&]() {
-        static auto durationSeconds = 0;
-
-        auto toSeconds = [](std::string const& duration) {
-           return (((duration[0] - '0')*10 + duration[1] - '0')*60*60) + (((duration[3] - '0')*10 + duration[4] - '0')*60) + ((duration[6] - '0')*10 + duration[7] - '0');
-        };
-
-        std::string string = m_SlicingDatasetProcess->readAllStandardError().toStdString();
-        auto durationStart = string.find("Duration: ");
-        if (durationStart != std::string::npos)
-        {
-           auto durationString = string.substr(durationStart + 10, 8);
-           durationSeconds = toSeconds(durationString);
-           qDebug() << "Duration: " << QString::fromStdString(durationString) << ", " << durationSeconds;
-        }
-        auto start = string.rfind("time=");
-        if (start != std::string::npos)
-        {
-           start += 5;
-           auto end = string.rfind("bitrate=");
-           if (end != std::string::npos)
-           {
-              end -= 4;
-              auto currentPosString = string.substr(start, end - start);
-              auto currentPos = toSeconds(currentPosString);
-              qDebug() << QString::fromStdString(currentPosString) << ", " << currentPos;
-              m_progressDialog->setValue((currentPos * 100)/durationSeconds);
-           }
-        }
-    });
-    QObject::connect(m_SlicingDatasetProcess, static_cast<void(QProcess::*)(int)>(&QProcess::finished), [&](){
-       m_progressDialog->close();
-    });
-    QStringList ffmpegArguments("-i");
-    ffmpegArguments << item << "-vf" << "fps=1" << "%06d.png";//jpg";
-    m_SlicingDatasetProcess->start("/usr/local/bin/ffmpeg", ffmpegArguments);
-
-    if (m_progressDialog == nullptr)
-    {
-      m_progressDialog = new QProgressDialog("Slicing video process", "&Cancel", 0, 100);
-      m_progressDialog->setWindowModality(Qt::WindowModal);
-      m_progressDialog->setMinimumSize(400, 40);
-      m_progressDialog->setRange(0, 100);
-      m_progressDialog->setValue(0);
-    }
-
-    m_progressDialog->setLabelText(QString("Slicing video %1 to dataset").arg(item));
-
-    auto isCanceled = false;
-    QObject::connect(m_progressDialog, &QProgressDialog::canceled, [&]() {
-        isCanceled = true;
-        m_SlicingDatasetProcess->terminate();
-    });
-    m_progressDialog->exec();
-    qDebug() << "Result of process: " << m_SlicingDatasetProcess->waitForFinished();
-    if (isCanceled)
-    {
-        qDebug() << "Cancelled slicing process";
-        break;
-    }
-  }
-  return true;
-}
-
-void MainWindow::updateButtonEnabling(bool isEnabled)
-{
-  ui->pushButton_next->setEnabled(isEnabled);
-  ui->pushButton_prev->setEnabled(isEnabled);
-  ui->pushButton_save->setEnabled(isEnabled);
-  ui->pushButton_remove->setEnabled(isEnabled);
-  ui->tableWidget_label->setEnabled(isEnabled);
-  ui->label_image->setEnabled(isEnabled);
-}
-
-void MainWindow::updateDatasetNavigator()
-{
-  ui->horizontalSlider_images->setEnabled(true);
-  ui->horizontalSlider_images->setRange(0, _datasetList.size() - 1);
-  ui->horizontalSlider_images->blockSignals(true);
-  ui->horizontalSlider_images->setValue(std::distance(_datasetList.begin(), _datasetIt));
-  ui->horizontalSlider_images->blockSignals(false);
-}
-
-void MainWindow::initTableWidgetContextMenuSetup()
-{
-  ui->tableWidget_label->setContextMenuPolicy(Qt::CustomContextMenu);
-  QObject::connect(ui->tableWidget_label, &QTableWidget::customContextMenuRequested, this, [this]() {
-      QMenu* menu = new QMenu;
-      auto addClass = menu->addAction("Add class");
-      auto point = ui->tableWidget_label->mapFromGlobal(QCursor::pos() - QPoint{0, 25});
-      auto selectedItemPtr = ui->tableWidget_label->itemAt(point);
-      if (selectedItemPtr)
-      {
-          auto removeClass = menu->addAction("Remove class");
-          QObject::connect(removeClass, &QAction::triggered, this, [this, menu, removeClass, selectedItemPtr]() {
-              _classesList.remove(selectedItemPtr->text());
-              _classesIt = _classesList.begin();
-              // TODO: May be should be set iterator _classesIt instead
-              ui->label_image->setFocusObjectLabel(!_classesList.isEmpty() ? _classesIt.key() : "");
-              _datasetProject.set("class_names_list", _classesList);
-              ui->tableWidget_label->removeRow(selectedItemPtr->row());
-              removeClass->deleteLater();
-              menu->deleteLater();
-          });
-      }
-      QObject::connect(addClass, &QAction::triggered, this, [this, menu, addClass]() {
-          bool isAccepted{};
-          while(true)
-          {
-              auto newClassName = QInputDialog::getText(this, "Create class", "Class name:", QLineEdit::Normal, "", &isAccepted, Qt::Dialog);
-              if (isAccepted && !newClassName.isEmpty())
-              {
-                  if (_classesList.contains(newClassName))
-                  {
-                      // TODO: May be should be dialog box shown.
-                      qDebug() << "The class with name " << newClassName << " has already exist, try again";
-                      continue;
-                  }
-                  auto const lastRowIndex = ui->tableWidget_label->rowCount();
-                  auto classNameColor = QColor(QColor::colorNames().first());
-                  qDebug() << newClassName << ", " << lastRowIndex << ", " << classNameColor;
-
-                  ui->tableWidget_label->insertRow(lastRowIndex);
-
-                  ui->tableWidget_label->setItem(lastRowIndex, 0, new QTableWidgetItem(newClassName));
-                  ui->tableWidget_label->item(lastRowIndex, 0)->setFlags(ui->tableWidget_label->item(lastRowIndex, 0)->flags() ^ Qt::ItemIsEditable);
-
-                  ui->tableWidget_label->setItem(lastRowIndex, 1, new QTableWidgetItem(""));
-                  ui->tableWidget_label->item(lastRowIndex, 1)->setBackgroundColor(classNameColor);
-                  ui->tableWidget_label->item(lastRowIndex, 1)->setFlags(ui->tableWidget_label->item(lastRowIndex, 1)->flags() ^ Qt::ItemIsEditable ^ Qt::ItemIsSelectable);
-
-                  // TODO: May be should be set iterator _classesIt instead
-                  ui->label_image->setFocusObjectLabel(newClassName);
-                  QList<QVariant> classData;
-                  classData.push_back(lastRowIndex);
-                  classData.push_back(static_cast<int>(classNameColor.rgba()));
-                  _classesList[newClassName] = classData;
-                  _classesIt = _classesList.find(newClassName);
-                  _datasetProject.set("class_names_list", _classesList);
-
-                  //ui->label_image->setClasses(&_classesList);
-              }
-              break;
-          }
-          addClass->deleteLater();
-          menu->deleteLater();
-      });
-      menu->exec(QCursor::pos());
-      menu->clear();
-  });
-}
-
-void MainWindow::initTableWidget()
-{
-  ui->tableWidget_label->horizontalHeader()->setVisible(true);
-  ui->tableWidget_label->horizontalHeader()->setStretchLastSection(true);
-
-  disconnect(ui->tableWidget_label->horizontalHeader(), SIGNAL(sectionPressed(int)),ui->tableWidget_label, SLOT(selectColumn(int)));
-
-  initTableWidgetContextMenuSetup();
-}
-
-void MainWindow::loadClassNameList()
-{
-    ui->tableWidget_label->clear();
-
-    _classesList = _datasetProject.get("class_names_list", [&]() -> QVariantMap {
-        QVariantMap data;
-        auto classesFilePath = QFileDialog::getOpenFileName(this, tr("Open class list file"), "./", tr("Darknet class list file (*.txt *.names)"));
-        if (!classesFilePath.isEmpty())
-        {
-            auto classesFile = QFile(classesFilePath);
-            if (classesFile.open(QIODevice::ReadOnly))
-            {
-                auto classIndex = 0;
-                auto in = QTextStream(&classesFile);
-                while (!in.atEnd())
-                {
-                    QList<QVariant> classData;
-                    classData.push_back(classIndex++);
-                    classData.push_back(-1); // White color with alpha 255
-                    data[in.readLine()] = classData;
-                    qDebug() << classData;
-                }
-            }
-        }
-        return data;
-    });
-
-    _classesIt = _classesList.begin();
-    ui->label_image->setClasses(&_classesList);
-    if (_classesList.isEmpty())
-    {
-        return;
-    }
-    ui->label_image->setFocusObjectLabel(_classesIt.key());
-
-    updateClassesTable();
-}
-
-void MainWindow::updateClassesTable()
-{
-    qDebug() << _classesList.size();
-    ui->tableWidget_label->setRowCount(_classesList.size());
-    for (auto it = _classesList.begin(); it != _classesList.end(); ++it)
-    {
-        auto const className = it.key();
-        auto const classData = it->toList();
-        // TODO: Should be fixed classData if wrong
-        auto const classNameColor = (classData.size() == 2)
-            ? QColor::fromRgba(static_cast<uint32_t>(classData[1].toInt()))
-            : QColor(255, 255, 255, 255);
-        auto const rowIndex = classData[0].toInt();
-        qDebug() << className << ", " << rowIndex << ", " << classNameColor;
-
-        ui->tableWidget_label->setItem(rowIndex, 0, new QTableWidgetItem(className));
-        ui->tableWidget_label->item(rowIndex, 0)->setFlags(ui->tableWidget_label->item(rowIndex, 0)->flags() ^ Qt::ItemIsEditable);
-
-        ui->tableWidget_label->setItem(rowIndex, 1, new QTableWidgetItem(""));
-        ui->tableWidget_label->item(rowIndex, 1)->setBackgroundColor(classNameColor);
-        ui->tableWidget_label->item(rowIndex, 1)->setFlags(ui->tableWidget_label->item(rowIndex, 1)->flags() ^ Qt::ItemIsEditable ^ Qt::ItemIsSelectable);
-    }
-}
-
 void MainWindow::loadDatasetList()
 {
     _datasetList = _datasetProject.get("dataset_list", [&]() -> QVariantMap {
         QVariantMap data;
         for (auto const& item : openDatasetDir(this))
         {
-            data[item] = ui->label_image->importClassBoxesFromAnnotationFile(item, _classesList);
+            data[item] = _ui->label_image->importClassBoxesFromAnnotationFile(item, _classesList);
         }
         return data;
     });
     updateClassesTable();
     _datasetIt = _datasetList.begin();
-    ui->label_image->loadClassBoxes(_datasetIt);
+    _ui->label_image->loadClassBoxes(_datasetIt);
 }
 
-void MainWindow::datasetIteratorUpdated()
-{
-    _datasetProject.set("dataset_list", _datasetList);
-}
