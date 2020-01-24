@@ -409,13 +409,13 @@ bool MainWindow::openVideos()
   auto selectedFileList = QFileDialog::getOpenFileNames(this, "Select one or more files to open", "./", "Video (*.mp4 *.avi *.webm)");
   if (!selectedFileList.isEmpty())
   {
-      auto progressDialog = QProgressDialog("Slicing video process", "&Cancel", 0, 100);
+      QProgressDialog progressDialog("Slicing video process", "&Cancel", 0, 100);
       progressDialog.setWindowModality(Qt::WindowModal);
       progressDialog.setMinimumSize(400, 40);
       progressDialog.setRange(0, 100);
       progressDialog.setValue(0);
 
-      auto slicingDatasetProcess = QProcess{};
+      QProcess slicingDatasetProcess{};
 
       for (auto const& item : selectedFileList)
       {
@@ -529,11 +529,11 @@ void MainWindow::loadClassNameList()
         auto classesFilePath = QFileDialog::getOpenFileName(this, tr("Open class list file"), "./", tr("Darknet class list file (*.txt *.names)"));
         if (!classesFilePath.isEmpty())
         {
-            auto classesFile = QFile(classesFilePath);
+            QFile classesFile{classesFilePath};
             if (classesFile.open(QIODevice::ReadOnly))
             {
                 auto classIndex = 0;
-                auto in = QTextStream(&classesFile);
+                QTextStream in{&classesFile};
                 while (!in.atEnd())
                 {
                     QList<QVariant> classData;
@@ -572,7 +572,7 @@ void MainWindow::exportClassListToFile()
         return _classesList.find(left)->toList()[0] < _classesList.find(right)->toList()[0];
     });
     qDebug() << classesList;
-    auto classesFile = QFile(classNameFilePath);
+    QFile classesFile{classNameFilePath};
     if (classesFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
     {
         QTextStream out(&classesFile);

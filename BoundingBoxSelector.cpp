@@ -8,7 +8,20 @@
 #include <QJsonArray>
 
 #include <cmath>
+#include <algorithm>
 #include <iomanip>
+
+#if defined(_MSC_VER)
+namespace std {
+
+    template<class T>
+    constexpr const T &clamp(const T &v, const T &lo, const T &hi) {
+        assert(!(hi < lo));
+        return (v < lo) ? lo : (hi < v) ? hi : v;
+    }
+
+} /// end namespace std
+#endif
 
 namespace {
     auto toAbsolute(QPointF const& in, QSize const& size) noexcept -> QPoint
