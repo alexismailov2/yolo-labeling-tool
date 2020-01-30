@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QMap>
 
 #include <cmath>
 #include <algorithm>
@@ -128,6 +129,7 @@ void BoundingBoxSelector::onCustomContextMenuRequested(const QPoint &pos)
     {
         m_objBoundingBoxes.erase(m_selectedItem);
         m_selectedItem = m_objBoundingBoxes.end();
+        syncClassBoxes();
         showImage(true);
         return;
     }
@@ -141,6 +143,7 @@ void BoundingBoxSelector::onCustomContextMenuRequested(const QPoint &pos)
             auto addClass = menu->addAction(QString::number(index++));
             QObject::connect(addClass, &QAction::triggered, this, [&, it, menu, addClass]() {
                 m_objBoundingBoxes.erase(it);
+                syncClassBoxes();
                 showImage();
 
                 addClass->deleteLater();
@@ -197,14 +200,16 @@ void BoundingBoxSelector::mousePressEvent(QMouseEvent *ev)
             {
                 m_objBoundingBoxes.push_back(BoundingBoxSelector::Label{_focusedClassName, box, false});
 
-                // Adding box to _datasetIt
-                auto data = _datasetIt->toMap();
-                auto boxesList = data[_focusedClassName].toList();
-                boxesList.push_back(QList<QVariant>{box.x(), box.y(), box.width(), box.height()});
-                data[_focusedClassName] = boxesList;
-                _datasetIt->setValue(data);
+                syncClassBoxes();
+// TODO: Should be deleted after test
+//                // Adding box to _datasetIt
+//                auto data = _datasetIt->toMap();
+//                auto boxesList = data[_focusedClassName].toList();
+//                boxesList.push_back(QList<QVariant>{box.x(), box.y(), box.width(), box.height()});
+//                data[_focusedClassName] = boxesList;
+//                _datasetIt->setValue(data);
 
-                emit datasetIteratorUpdated();
+//                emit datasetIteratorUpdated();
             }
             m_bLabelingStarted = false;
             showImage();
@@ -230,16 +235,11 @@ void BoundingBoxSelector::resizeEvent(QResizeEvent *event)
 
 void BoundingBoxSelector::init()
 {
-    // TODO: Should be deletedt
-    //m_focusedObjectLabel = 0;
-
     updateMousePosition();
 }
 
 void BoundingBoxSelector::updateMousePosition()
 {
-    // TODO: Should be deleted after test
-    //m_objBoundingBoxes.clear();
     m_bLabelingStarted = false;
 
     setMousePosition(mapFromGlobal(QCursor::pos()));
@@ -247,7 +247,7 @@ void BoundingBoxSelector::updateMousePosition()
 
 void BoundingBoxSelector::setMousePosition(QPoint&& pos)
 {
-    // TODO: MAy be clamp can be replaced by this one
+    // TODO: May be clamp can be replaced by this one
     //auto intersected = QRect{pos, pos}.intersected(rect());
     //qDebug() << ", pos: " << pos << ", rect: " << rect() << "intersected: " << intersected;
 
@@ -327,35 +327,32 @@ void BoundingBoxSelector::loadClassBoxes(QVariantMap::iterator datasetIt)
 {
     _datasetIt = datasetIt;
     m_objBoundingBoxes.clear();
-    extractClassBoxes(_datasetIt, [&](QString const& className, QRectF&& boxRect){
+    extractClassBoxes(_datasetIt, [&](QString const& className, QRectF&& boxRect) {
         m_objBoundingBoxes.push_back({className, boxRect, false});
     });
-// TODO: Should be deleted after test
-//    auto const classBoxes = _datasetIt.value().toMap();
-//    for (auto classBoxesIt = classBoxes.begin(); classBoxesIt != classBoxes.end(); ++classBoxesIt)
-//    {
-//        for (auto box : classBoxesIt.value().toList())
-//        {
-//            auto const boxCoords = box.toList();
-//            auto const boxRect = QRectF{boxCoords[0].toReal(), boxCoords[1].toReal(), boxCoords[2].toReal(), boxCoords[3].toReal()};
-//            m_objBoundingBoxes.push_back({classBoxesIt.key(), boxRect, false});
-//        }
-//    }
+}
+
+void BoundingBoxSelector::syncClassBoxes()
+{
+    if (!_datasetIt->isValid())
+    {
+        return;
+    }
+
+    QMap<QString, QVariant> classBoxes;
+    for (auto const& boxObject : m_objBoundingBoxes)
+    {
+        auto boxesList = classBoxes[boxObject.label].toList();
+        boxesList.push_back(QList<QVariant>{boxObject.box.x(), boxObject.box.y(), boxObject.box.width(), boxObject.box.height()});
+        classBoxes[boxObject.label] = boxesList;
+    }
+    _datasetIt->setValue(classBoxes);
+    emit datasetIteratorUpdated();
 }
 
 void BoundingBoxSelector::setFocusObjectLabel(QString const& className)
 {
     _focusedClassName = className;
-}
-
-bool BoundingBoxSelector::isOpened()
-{
-    return !m_inputImgScaled.isNull();
-}
-
-auto BoundingBoxSelector::crop(QRect rect) -> QImage
-{
-    return m_inputImgScaled.copy(rect);
 }
 
 void BoundingBoxSelector::drawCrossLine(QPainter& painter, QColor color, int thickWidth)
@@ -461,23 +458,23 @@ void BoundingBoxSelector::exportClassBoxesToAnnotationFile(QVariantMap::iterator
                            << boxRect.height();
             isFirst = false;
         });
-// TODO: Should be moved to dedicated function
-//            if(ui->checkBox_cropping->isChecked())
-//            {
-//                QImage cropped = crop(toAbsolute(objBox.box, m_inputImgScaled.size()));
-//                if(!cropped.isNull())
-//                {
-//                    string strImgFile   = m_imgList.at(m_imgIndex).toStdString();
-//                    strImgFile = strImgFile.substr(strImgFile.find_last_of('/') + 1,
-//                                                   strImgFile.find_last_of('.') - strImgFile.find_last_of('/') - 1);
-//                    cropped.save(QString().fromStdString(strImgFile) + "_cropped_" + QString::number(i) + ".png");
-//                }
-//            }
     }
+}
 
-    // TODO: May be it is not needed
-#if 0
-        ui->textEdit_log->setText(qstrOutputLabelData + " saved.");
-    }
-#endif
+auto BoundingBoxSelector::getCrops(QVariantMap::iterator datasetIt) const -> QMap<QString, QList<QImage>>
+{
+    QMap<QString, QList<QImage>> crops;
+    extractClassBoxes(datasetIt, [&](QString const& className, QRectF&& boxRect) {
+        auto cropped = QImage{m_inputImgScaled.copy(toAbsolute(std::move(boxRect), m_inputImgScaled.size()))};
+        if (!cropped.isNull())
+        {
+            crops[className].push_back(cropped);
+        }
+        // TODO: Should be moved to dedicated function
+        // auto croppedImageFile = datasetIt.key().toStdString();
+        // croppedImageFile = croppedImageFile.substr(croppedImageFile.find_last_of('/') + 1,
+        //                                            croppedImageFile.find_last_of('.') - croppedImageFile.find_last_of('/') - 1);
+        // cropped.save(QString::fromStdString(croppedImageFile) + "_cropped_" + QString::number(i) + ".png");
+    });
+    return crops;
 }

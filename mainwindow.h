@@ -43,6 +43,8 @@ private slots:
     void prevClass();
     void datasetIteratorUpdated();
 
+    void on_pushButtonValidate_clicked();
+
 protected:
     void wheelEvent(QWheelEvent*);
     void keyPressEvent(QKeyEvent *);

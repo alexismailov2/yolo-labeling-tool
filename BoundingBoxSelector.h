@@ -5,6 +5,8 @@
 #include <QLabel>
 #include <QImage>
 #include <QMouseEvent>
+#include <QMap>
+
 #include <iostream>
 #include <fstream>
 
@@ -23,22 +25,6 @@ public:
         bool   focused;
     };
 
-// TODO: May be should be private
-private:
-    void mouseMoveEvent(QMouseEvent *ev) override;
-    void mousePressEvent(QMouseEvent *ev) override;
-    void mouseReleaseEvent(QMouseEvent *ev) override;
-    void resizeEvent(QResizeEvent *event) override;
-
-public slots:
-    void onCustomContextMenuRequested(const QPoint &pos);
-
-signals:
-    void Mouse_Moved();
-    void Mouse_Pressed();
-    void Mouse_Release();
-    void datasetIteratorUpdated();
-
 public:
     BoundingBoxSelector(QWidget *parent = nullptr);
     void init();
@@ -46,16 +32,30 @@ public:
     void showImage(bool menuHandling = false);
 
     void loadClassBoxes(QVariantMap::iterator);
+    void syncClassBoxes();
     void setFocusObjectLabel(QString const&);
-
-    bool isOpened();
-    auto crop(QRect) -> QImage;
 
     void setClasses(QVariantMap* classes);
     void clearAllClassBoxex();
 
     auto importClassBoxesFromAnnotationFile(QString const&, QVariantMap&) -> QVariantMap;
     void exportClassBoxesToAnnotationFile(QVariantMap::iterator, QVariantMap const&) const;
+    auto getCrops(QVariantMap::iterator) const -> QMap<QString, QList<QImage>>;
+
+signals:
+    void Mouse_Moved();
+    void Mouse_Pressed();
+    void Mouse_Release();
+    void datasetIteratorUpdated();
+
+private:
+    void mouseMoveEvent(QMouseEvent *ev) override;
+    void mousePressEvent(QMouseEvent *ev) override;
+    void mouseReleaseEvent(QMouseEvent *ev) override;
+    void resizeEvent(QResizeEvent *event) override;
+
+private slots:
+    void onCustomContextMenuRequested(const QPoint &pos);
 
 private:
     void setMousePosition(QPoint&& pos = {});

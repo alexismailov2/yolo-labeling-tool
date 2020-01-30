@@ -26,15 +26,18 @@ SOURCES += \
         datasetproject.cpp \
         main.cpp \
         mainwindow.cpp \
-        BoundingBoxSelector.cpp
+        BoundingBoxSelector.cpp \
+        validationclassboxes.cpp
 
 HEADERS += \
         BoundingBoxSelector.h \
         datasetproject.h \
-        mainwindow.h
+        mainwindow.h \
+        validationclassboxes.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+        validationclassboxes.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

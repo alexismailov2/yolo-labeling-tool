@@ -14,6 +14,8 @@
 #include <QtWidgets/QInputDialog>
 #include <iomanip>
 
+#include <validationclassboxes.h>
+
 namespace {
 
     auto openDatasetDir(QWidget* parent) -> QStringList
@@ -172,7 +174,8 @@ void MainWindow::on_tableWidget_label_cellDoubleClicked(int row, int column)
 void MainWindow::on_tableWidget_label_cellClicked(int row, int column)
 {
    Q_UNUSED(column)
-   _classesIt = std::next(_classesList.begin(), row);
+   _classesIt = _classesList.find(_ui->tableWidget_label->item(row, 0)->text());
+   //_classesIt = std::next(_classesList.begin(), row);
    updateCurrentClass();
 }
 
@@ -355,7 +358,8 @@ void MainWindow::setCurrentImg()
 
 void MainWindow::setNextImage()
 {
-    if (std::next(_datasetIt) != _datasetList.end())
+    if ((_datasetIt != _datasetList.end()) &&
+        (std::next(_datasetIt) != _datasetList.end()))
     {
         ++_datasetIt;
     }
@@ -376,7 +380,7 @@ void MainWindow::updateCurrentClass()
     if (!_classesList.isEmpty())
     {
         _ui->label_image->setFocusObjectLabel(_classesIt.key());
-        _ui->tableWidget_label->setCurrentCell(std::distance(_classesList.begin(), _classesIt), 0);
+        _ui->tableWidget_label->setCurrentCell(_classesIt.value().toList()[0].toInt(), 0);
     }
 }
 
@@ -429,11 +433,6 @@ bool MainWindow::openVideos()
         {
           qDebug() << "Could not create directory: " << workingDirectoryPath;
         }
-    // TODO: Should be deleted after test
-    //    if (_slicingDatasetProcess == nullptr)
-    //    {
-    //        _slicingDatasetProcess = new QProcess(this);
-    //    }
         slicingDatasetProcess.setWorkingDirectory(workingDirectoryPath);
         QObject::connect(&slicingDatasetProcess, &QProcess::readyReadStandardError, [&]() {
             static auto durationSeconds = 0;
@@ -471,15 +470,6 @@ bool MainWindow::openVideos()
         QStringList ffmpegArguments("-i");
         ffmpegArguments << item << "-vf" << "fps=1" << "%06d.png";//jpg";
         slicingDatasetProcess.start("/usr/local/bin/ffmpeg", ffmpegArguments);
-    // TODO: Should be deleted after test
-    //    if (_progressDialog == nullptr)
-    //    {
-    //      _progressDialog = new QProgressDialog("Slicing video process", "&Cancel", 0, 100);
-    //      _progressDialog->setWindowModality(Qt::WindowModal);
-    //      _progressDialog->setMinimumSize(400, 40);
-    //      _progressDialog->setRange(0, 100);
-    //      _progressDialog->setValue(0);
-    //    }
 
         progressDialog.setLabelText(QString("Slicing video %1 to dataset").arg(item));
 
@@ -509,6 +499,7 @@ void MainWindow::updateButtonEnabling(bool isEnabled)
   _ui->pushButton_remove->setEnabled(isEnabled);
   _ui->tableWidget_label->setEnabled(isEnabled);
   _ui->label_image->setEnabled(isEnabled);
+  _ui->pushButtonValidate->setEnabled(isEnabled);
 }
 
 void MainWindow::updateDatasetNavigator()
@@ -598,3 +589,10 @@ void MainWindow::loadDatasetList()
     _ui->label_image->loadClassBoxes(_datasetIt);
 }
 
+
+void MainWindow::on_pushButtonValidate_clicked()
+{
+    auto classBoxesList = _ui->label_image->getCrops(_datasetIt);
+    ValidationClassBoxes validationClassBoxes{this, &classBoxesList};
+    validationClassBoxes.exec();
+}
