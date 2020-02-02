@@ -589,10 +589,8 @@ void MainWindow::loadDatasetList()
     _ui->label_image->loadClassBoxes(_datasetIt);
 }
 
-
 void MainWindow::on_pushButtonValidate_clicked()
 {
-    auto classBoxesList = _ui->label_image->getCrops(_datasetIt);
-    ValidationClassBoxes validationClassBoxes{this, &classBoxesList};
+    ValidationClassBoxes validationClassBoxes{this, &_datasetList};
     validationClassBoxes.exec();
 }

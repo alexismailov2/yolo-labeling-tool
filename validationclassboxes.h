@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QMap>
+#include <QListWidget>
 
 namespace Ui {
 class ValidationClassBoxes;
@@ -13,11 +14,12 @@ class ValidationClassBoxes : public QDialog
     Q_OBJECT
 
 public:
-    explicit ValidationClassBoxes(QWidget *parent = nullptr, QMap<QString, QList<QImage>>* classBoxes = nullptr);
+    explicit ValidationClassBoxes(QWidget *parent = nullptr, QVariantMap* datasetList = nullptr);
     ~ValidationClassBoxes();
 
 private:
-    Ui::ValidationClassBoxes *ui;
+    Ui::ValidationClassBoxes* _ui;
+    QMap<QString, QListWidget*> _listWidgets;
 };
 
 #endif // VALIDATIONCLASSBOXES_H

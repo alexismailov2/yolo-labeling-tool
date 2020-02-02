@@ -464,8 +464,9 @@ void BoundingBoxSelector::exportClassBoxesToAnnotationFile(QVariantMap::iterator
 auto BoundingBoxSelector::getCrops(QVariantMap::iterator datasetIt) const -> QMap<QString, QList<QImage>>
 {
     QMap<QString, QList<QImage>> crops;
+    QImage image{datasetIt.key()};
     extractClassBoxes(datasetIt, [&](QString const& className, QRectF&& boxRect) {
-        auto cropped = QImage{m_inputImgScaled.copy(toAbsolute(std::move(boxRect), m_inputImgScaled.size()))};
+        auto cropped = image.copy(toAbsolute(std::move(boxRect), image.size()));
         if (!cropped.isNull())
         {
             crops[className].push_back(cropped);
