@@ -16,7 +16,8 @@ class ValidationClassBoxes : public QDialog
 
 public:
     explicit ValidationClassBoxes(QWidget *parent = nullptr,
-                                  QVariantMap* datasetList = nullptr);
+                                  QVariantMap* datasetList = nullptr,
+                                  QVariantMap* classesList = nullptr);
     ~ValidationClassBoxes();
 
 signals:

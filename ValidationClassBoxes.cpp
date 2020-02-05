@@ -1,5 +1,5 @@
 #include "ValidationClassBoxes.h"
-#include "ui_validationclassboxes.h"
+#include "ui_ValidationClassBoxes.h"
 
 #include "Utils.h"
 
@@ -7,7 +7,7 @@
 #include <QDebug>
 #include <QProgressDialog>
 
-ValidationClassBoxes::ValidationClassBoxes(QWidget *parent, QVariantMap* datasetList)
+ValidationClassBoxes::ValidationClassBoxes(QWidget *parent, QVariantMap* datasetList, QVariantMap* classList)
     : QDialog(parent)
     , _ui(new Ui::ValidationClassBoxes)
     , _datasetList{datasetList}
@@ -20,6 +20,11 @@ ValidationClassBoxes::ValidationClassBoxes(QWidget *parent, QVariantMap* dataset
     progressDialog.setMinimumSize(400, 40);
     progressDialog.setRange(0, 100);
     progressDialog.setValue(0);
+
+    for (auto const& item : classList->keys())
+    {
+        _classBoxesList[item];
+    }
 
     for (auto datasetIt = datasetList->begin(); datasetIt != datasetList->end(); ++datasetIt)
     {
@@ -54,11 +59,11 @@ ValidationClassBoxes::ValidationClassBoxes(QWidget *parent, QVariantMap* dataset
         _listWidgets[it.key()] = currentClassList;
 
         currentClassList->setContextMenuPolicy(Qt::CustomContextMenu);
-        connect(currentClassList, &QListView::customContextMenuRequested, this, [&, currentClassList](const QPoint &) {
+        connect(currentClassList, &QListView::customContextMenuRequested, this, [&, currentClassList, currentClassKey = it.key()](const QPoint &) {
             QMenu menu;
             for (auto const& className : _classBoxesList.keys())
             {
-                if (className != it.key())
+                if (className != currentClassKey)
                 {
                    menu.addAction(className);
                 }

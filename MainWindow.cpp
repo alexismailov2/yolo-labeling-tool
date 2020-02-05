@@ -1,5 +1,5 @@
 #include "MainWindow.h"
-#include "ui_mainwindow.h"
+#include "ui_MainWindow.h"
 
 #include <QFileDialog>
 #include <QColorDialog>
@@ -591,7 +591,7 @@ void MainWindow::loadDatasetList()
 
 void MainWindow::on_pushButtonValidate_clicked()
 {
-    ValidationClassBoxes validationClassBoxes{this, &_datasetList};
+    ValidationClassBoxes validationClassBoxes{this, &_datasetList, &_classesList};
     connect(&validationClassBoxes, &ValidationClassBoxes::datasetListUpdated, this, &MainWindow::datasetListUpdated);
     validationClassBoxes.exec();
 }
