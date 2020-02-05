@@ -23,21 +23,25 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++17
 
 SOURCES += \
-        datasetproject.cpp \
+        DatasetProject.cpp \
+        MainWindow.cpp \
+        Utils.cpp \
+        ValidationClassBoxes.cpp \
+        ValidationClassBoxesListModel.cpp \
         main.cpp \
-        mainwindow.cpp \
-        BoundingBoxSelector.cpp \
-        validationclassboxes.cpp
+        BoundingBoxSelector.cpp
 
 HEADERS += \
         BoundingBoxSelector.h \
-        datasetproject.h \
-        mainwindow.h \
-        validationclassboxes.h
+        DatasetProject.h \
+        MainWindow.h \
+        Utils.h \
+        ValidationClassBoxes.h \
+        ValidationClassBoxesListModel.h
 
 FORMS += \
-        mainwindow.ui \
-        validationclassboxes.ui
+        MainWindow.ui \
+        ValidationClassBoxes.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

@@ -1,14 +1,9 @@
-#ifndef LABEL_IMG_H
-#define LABEL_IMG_H
+#pragma once
 
-#include <QObject>
 #include <QLabel>
 #include <QImage>
 #include <QMouseEvent>
 #include <QMap>
-
-#include <iostream>
-#include <fstream>
 
 class BoundingBoxSelector
    : public QLabel
@@ -82,5 +77,3 @@ private:
 };
 
 auto toTxtExtention(QString const& filePath) -> QString;
-
-#endif // LABEL_IMG_H

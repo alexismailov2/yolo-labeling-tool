@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+#include "MainWindow.h"
 #include "ui_mainwindow.h"
 
 #include <QFileDialog>
@@ -14,7 +14,7 @@
 #include <QtWidgets/QInputDialog>
 #include <iomanip>
 
-#include <validationclassboxes.h>
+#include <ValidationClassBoxes.h>
 
 namespace {
 
@@ -51,7 +51,7 @@ MainWindow::MainWindow(QWidget *parent) :
   connect(new QShortcut(QKeySequence(Qt::Key_D), this),            &QShortcut::activated, this, &MainWindow::on_pushButton_next_clicked);
   connect(new QShortcut(QKeySequence(Qt::Key_Space), this),        &QShortcut::activated, this, &MainWindow::on_pushButton_next_clicked);
 
-  connect(_ui->label_image, &BoundingBoxSelector::datasetIteratorUpdated, this, &MainWindow::datasetIteratorUpdated);
+  connect(_ui->label_image, &BoundingBoxSelector::datasetIteratorUpdated, this, &MainWindow::datasetListUpdated);
 
   init();
   initTableWidget();
@@ -209,7 +209,7 @@ void MainWindow::prevClass()
 }
 
 // TODO: All logic for working with _datasetList and _classesList should be moved to DatasetProject class
-void MainWindow::datasetIteratorUpdated()
+void MainWindow::datasetListUpdated()
 {
     _datasetProject.set("dataset_list", _datasetList);
 }
@@ -592,5 +592,6 @@ void MainWindow::loadDatasetList()
 void MainWindow::on_pushButtonValidate_clicked()
 {
     ValidationClassBoxes validationClassBoxes{this, &_datasetList};
+    connect(&validationClassBoxes, &ValidationClassBoxes::datasetListUpdated, this, &MainWindow::datasetListUpdated);
     validationClassBoxes.exec();
 }

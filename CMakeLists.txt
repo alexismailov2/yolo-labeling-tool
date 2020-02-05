@@ -5,7 +5,7 @@ project(YoloLabel)
 set(CMAKE_CXX_STANDARD 17)
 
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
-   set(CMAKE_INCLUDE_CURRENT_DIR ON)
+  set(CMAKE_INCLUDE_CURRENT_DIR ON)
 endif()
 
 include_directories(${CMAKE_CURRENT_LIST_DIR})
@@ -13,14 +13,19 @@ include_directories(${CMAKE_CURRENT_LIST_DIR})
 find_package(Qt5 COMPONENTS Widgets Core Gui REQUIRED)
 
 add_executable(${PROJECT_NAME}
-   mainwindow.ui
-   mainwindow.h
-   mainwindow.cpp
-   main.cpp
-   datasetproject.cpp
-   datasetproject.h
-   BoundingBoxSelector.cpp
-   BoundingBoxSelector.h
+  MainWindow.ui
+  MainWindow.h
+  MainWindow.cpp
+  DatasetProject.cpp
+  DatasetProject.h
+  ValidationClassBoxes.ui
+  ValidationClassBoxes.h
+  ValidationClassBoxes.cpp
+  ValidationClassBoxesListModel.h
+  ValidationClassBoxesListModel.cpp
+  BoundingBoxSelector.cpp
+  BoundingBoxSelector.h
+  main.cpp
   )
 
 set_target_properties(${PROJECT_NAME}

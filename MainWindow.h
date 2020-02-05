@@ -1,7 +1,6 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
 
-#include "datasetproject.h"
+#include "DatasetProject.h"
 
 #include <QMainWindow>
 #include <QWheelEvent>
@@ -41,7 +40,7 @@ private slots:
     void clearAllClassBoxes();
     void nextClass();
     void prevClass();
-    void datasetIteratorUpdated();
+    void datasetListUpdated();
 
     void on_pushButtonValidate_clicked();
 
@@ -79,5 +78,3 @@ private:
 
     DatasetProject         _datasetProject;
 };
-
-#endif // MAINWINDOW_H
