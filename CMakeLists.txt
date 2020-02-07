@@ -25,6 +25,8 @@ add_executable(${PROJECT_NAME}
   ValidationClassBoxesListModel.cpp
   BoundingBoxSelector.cpp
   BoundingBoxSelector.h
+  Utils.cpp
+  Utils.h
   main.cpp
   )
 
