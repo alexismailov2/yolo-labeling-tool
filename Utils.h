@@ -13,7 +13,7 @@ auto toAbsolute(QRectF const& in, QSize const& size) noexcept -> QRect;
 auto fromAbsolute(QPoint const& in, QSize const& size) noexcept -> QPointF;
 auto fromAbsolute(QRect const& in, QSize const& size) noexcept -> QRectF;
 
-#if defined(_MSC_VER) || (__cplusplus < 201402L)
+#if defined(_MSC_VER) || (__cplusplus <= 201402L)
 namespace std {
 
     template<class T>
