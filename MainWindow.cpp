@@ -469,7 +469,7 @@ bool MainWindow::openVideos()
         });
         QStringList ffmpegArguments("-i");
         ffmpegArguments << item << "-vf" << "fps=1" << "%06d.png";//jpg";
-        slicingDatasetProcess.start("/usr/local/bin/ffmpeg", ffmpegArguments);
+        slicingDatasetProcess.start("/usr/bin/ffmpeg", ffmpegArguments);
 
         progressDialog.setLabelText(QString("Slicing video %1 to dataset").arg(item));
 
