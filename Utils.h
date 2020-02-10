@@ -4,6 +4,7 @@
 #include <QVariantMap>
 
 #include <functional>
+#include <cassert>
 
 // TODO: Should be moved to datasetproject class
 void extractClassBoxes(QVariantMap::iterator datasetIt, std::function<void(QString const&, QRectF&&)>&& extractedClassBoxFn);
