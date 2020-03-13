@@ -22,16 +22,17 @@ namespace {
         painter.drawRect(rect);
     }
 
-    void drawObjectBox(QPainter& painter, QRect const& rect, Qt::GlobalColor color, int thickWidth)
+    void drawObjectBox(QPainter& painter, QRect const& rect, Qt::GlobalColor color, int thickWidth, Qt::PenStyle penStyle = Qt::SolidLine)
     {
         QPen pen;
         pen.setWidth(thickWidth);
         pen.setColor(color);
+        pen.setStyle(penStyle);
 
         drawObjectBox(painter, pen, rect);
     }
 
-    void drawObjectBoxes(QPainter& painter, BoundingBoxSelector::Label::Vector const& boundingBoxes, QVariantMap const& classes, QSize const& size, int thickWidth = 3)
+    void drawObjectBoxes(QPainter& painter, BoundingBoxSelector::Label::Vector const& boundingBoxes, QVariantMap const& classes, QSize const& size, int thickWidth = 3, Qt::PenStyle penStyle = Qt::SolidLine)
     {
         QPen pen;
         pen.setWidth(thickWidth);
@@ -43,6 +44,7 @@ namespace {
                                    : QColor(0, 0, 0, 255);
             qDebug() << boundingbox.label << ", " << color;
             pen.setColor((boundingbox.focused) ? Qt::magenta : color);
+            pen.setStyle(penStyle);
             drawObjectBox(painter, pen, toAbsolute(boundingbox.box, size));
         }
     }
@@ -70,11 +72,16 @@ void BoundingBoxSelector::onCustomContextMenuRequested(const QPoint &pos)
 {
     Q_UNUSED(pos)
 
+    auto& objBoundingBoxes = (_isSelectionBoundingBoxFromDarknet) ? m_objBoundingBoxesFromDarknet : m_objBoundingBoxes;
     if (updateSelectedObjects() &&
-        (m_selectedItem != m_objBoundingBoxes.end()))
+        (m_selectedItem != objBoundingBoxes.end()))
     {
-        m_objBoundingBoxes.erase(m_selectedItem);
-        m_selectedItem = m_objBoundingBoxes.end();
+        if (_isSelectionBoundingBoxFromDarknet)
+        {
+          m_objBoundingBoxes.push_back(*m_selectedItem);
+        }
+        objBoundingBoxes.erase(m_selectedItem);
+        m_selectedItem = objBoundingBoxes.end();
         syncClassBoxes();
         showImage(true);
         return;
@@ -82,13 +89,17 @@ void BoundingBoxSelector::onCustomContextMenuRequested(const QPoint &pos)
 
     QMenu* menu = new QMenu;
     auto index = 0;
-    for (auto it = m_objBoundingBoxes.begin(); it != m_objBoundingBoxes.end(); ++it)
+    for (auto it = objBoundingBoxes.begin(); it != objBoundingBoxes.end(); ++it)
     {
         if (it->focused)
         {
             auto addClass = menu->addAction(QString::number(index++));
             QObject::connect(addClass, &QAction::triggered, this, [&, it, menu, addClass]() {
-                m_objBoundingBoxes.erase(it);
+                if (_isSelectionBoundingBoxFromDarknet)
+                {
+                  m_objBoundingBoxes.push_back(*it);
+                }
+                objBoundingBoxes.erase(it);
                 syncClassBoxes();
                 showImage();
 
@@ -96,7 +107,7 @@ void BoundingBoxSelector::onCustomContextMenuRequested(const QPoint &pos)
                 menu->deleteLater();
             });
             QObject::connect(addClass, &QAction::hovered, this, [&, it]() {
-                for (auto& item : m_objBoundingBoxes)
+                for (auto& item : objBoundingBoxes)
                 {
                     item.focused = false;
                 }
@@ -107,8 +118,11 @@ void BoundingBoxSelector::onCustomContextMenuRequested(const QPoint &pos)
             it->focused = false;
         }
     }
-    menu->exec(QCursor::pos());
-    menu->clear();
+    if (!menu->actions().isEmpty())
+    {
+      menu->exec(QCursor::pos());
+      menu->clear();
+    }
 }
 
 void BoundingBoxSelector::mouseMoveEvent(QMouseEvent *ev)
@@ -138,9 +152,9 @@ void BoundingBoxSelector::mousePressEvent(QMouseEvent *ev)
         {
             auto pointDiff = m_MousePosPrev - m_MousePos;
             auto box = QRectF{std::min(m_MousePosPrev.x(), m_MousePos.x()),
-                               std::min(m_MousePosPrev.y(), m_MousePos.y()),
-                               fabs(pointDiff.rx()),
-                               fabs(pointDiff.ry())};
+                              std::min(m_MousePosPrev.y(), m_MousePos.y()),
+                              std::fabs(pointDiff.rx()),
+                              std::fabs(pointDiff.ry())};
 
             if ((box.width() >= 0.01) && (box.height() >= 0.01))
             {
@@ -244,13 +258,18 @@ void BoundingBoxSelector::showImage(bool menuHandling)
         updateSelectedObjects();
     }
     drawObjectBoxes(painter, m_objBoundingBoxes, *_classes, size(), penThick);
+    if (_isBoxesFromDarknetVisible)
+    {
+      drawObjectBoxes(painter, m_objBoundingBoxesFromDarknet, *_classes, size(), penThick, Qt::PenStyle::DotLine);
+    }
     this->setPixmap(QPixmap::fromImage(imageOnUi));
 }
 
 bool BoundingBoxSelector::updateSelectedObjects()
 {
+    auto& objBoundingBoxes = (_isSelectionBoundingBoxFromDarknet) ? m_objBoundingBoxesFromDarknet : m_objBoundingBoxes;
     auto count = 0;
-    for (auto it = m_objBoundingBoxes.begin(); it != m_objBoundingBoxes.end(); ++it)
+    for (auto it = objBoundingBoxes.begin(); it != objBoundingBoxes.end(); ++it)
     {
         it->focused = it->box.contains(m_MousePos);
         if (it->focused)
@@ -264,7 +283,7 @@ bool BoundingBoxSelector::updateSelectedObjects()
     }
     if (count > 1)
     {
-        m_selectedItem = m_objBoundingBoxes.end();
+        m_selectedItem = objBoundingBoxes.end();
     }
     return count != 0;
 }
@@ -395,6 +414,8 @@ void BoundingBoxSelector::exportClassBoxesToAnnotationFile(QVariantMap::iterator
     {
         bool isFirst = true;
         extractClassBoxes(datasetIt, [&](QString const& className, QRectF&& boxRect) {
+          if (className != "excluded_from_annotation")
+          {
             annotationFile << ((!isFirst) ? "\n" : "")
                            << classes[className].toList()[0].toInt() << " "
                            << std::fixed << std::setprecision(6)
@@ -403,6 +424,7 @@ void BoundingBoxSelector::exportClassBoxesToAnnotationFile(QVariantMap::iterator
                            << boxRect.width() << " "
                            << boxRect.height();
             isFirst = false;
+          }
         });
     }
 }
@@ -424,4 +446,19 @@ auto BoundingBoxSelector::getCrops(QVariantMap::iterator datasetIt) const -> QMa
         // cropped.save(QString::fromStdString(croppedImageFile) + "_cropped_" + QString::number(i) + ".png");
     });
     return crops;
+}
+
+void BoundingBoxSelector::addClassBoxesFromDarknet(Label::Vector const& boxes)
+{
+   m_objBoundingBoxesFromDarknet = boxes;
+}
+
+void BoundingBoxSelector::boxesFromDarknetVisible(bool enable)
+{
+  _isBoxesFromDarknetVisible = enable;
+}
+
+void BoundingBoxSelector::setSelectionBoundingBoxFromDarknet(bool enable)
+{
+  _isSelectionBoundingBoxFromDarknet = enable;
 }

@@ -36,6 +36,9 @@ public:
     auto importClassBoxesFromAnnotationFile(QString const&, QVariantMap&) -> QVariantMap;
     void exportClassBoxesToAnnotationFile(QVariantMap::iterator, QVariantMap const&) const;
     auto getCrops(QVariantMap::iterator) const -> QMap<QString, QList<QImage>>;
+    void addClassBoxesFromDarknet(Label::Vector const& boxes);
+    void boxesFromDarknetVisible(bool enable);
+    void setSelectionBoundingBoxFromDarknet(bool enable);
 
 signals:
     void Mouse_Moved();
@@ -73,7 +76,10 @@ private:
     QVariantMap::iterator _datasetIt{};
 
     Label::Vector m_objBoundingBoxes;
+    Label::Vector m_objBoundingBoxesFromDarknet;
     Label::Vector::iterator m_selectedItem;
+    bool _isBoxesFromDarknetVisible{};
+    bool _isSelectionBoundingBoxFromDarknet{};
 };
 
 auto toTxtExtention(QString const& filePath) -> QString;

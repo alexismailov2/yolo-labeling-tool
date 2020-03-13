@@ -68,14 +68,18 @@ ValidationClassBoxes::ValidationClassBoxes(QWidget *parent, QVariantMap* dataset
                    menu.addAction(className);
                 }
             }
+            menu.addAction("remove");
             auto action = menu.exec(QCursor::pos());
             if (action)
             {
                 auto currentListViewModel = currentClassList->selectionModel();
-                auto selectedListViewModel = _listWidgets[action->text()]->model();
-                for (auto selectedIndex : currentListViewModel->selectedIndexes())
+                if (action->text() != "remove")
                 {
-                    selectedListViewModel->insertRow(selectedListViewModel->rowCount(), selectedIndex);
+                    auto selectedListViewModel = _listWidgets[action->text()]->model();
+                    for (auto selectedIndex : currentListViewModel->selectedIndexes())
+                    {
+                        selectedListViewModel->insertRow(selectedListViewModel->rowCount(), selectedIndex);
+                    }
                 }
                 while (true)
                 {

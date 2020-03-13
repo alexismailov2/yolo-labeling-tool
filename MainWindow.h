@@ -11,6 +11,8 @@
 
 #include <QtCore/QProcess>
 
+#include <yolo_v2_class.hpp>
+
 #include <iostream>
 #include <fstream>
 
@@ -43,6 +45,13 @@ private slots:
     void datasetListUpdated();
 
     void on_pushButtonValidate_clicked();
+    void on_pushButtonGenerateDataset_clicked();
+
+    void on_loadDarknetModel_clicked();
+
+    void on_darknetAutoLabeling_toggled(bool checked);
+
+    void on_isDarknetBoxesVisible_toggled(bool checked);
 
 protected:
     void wheelEvent(QWheelEvent*);
@@ -65,9 +74,11 @@ private:
     void updateCurrentClass();
     void updateClassesTable();
 
-    void loadClassNameList();
-    void loadDatasetList();
+    void loadClassNameList(QString const& classesFilePath);
+    void loadDatasetList(QString const& datasetPath);
     void exportClassListToFile();
+
+    void detect();
 
     Ui::MainWindow*        _ui;
     // TODO: May be it should be stored in the datasetproject source
@@ -77,4 +88,5 @@ private:
     QVariantMap::iterator  _classesIt;
 
     DatasetProject         _datasetProject;
+    std::unique_ptr<Detector> _net;
 };

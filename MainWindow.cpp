@@ -18,9 +18,10 @@
 
 namespace {
 
-    auto openDatasetDir(QWidget* parent) -> QStringList
+    auto openDatasetDir(QWidget* parent, QString const& datasetPath = {}) -> QStringList
     {
-        auto datasetDir = QDir{QFileDialog::getExistingDirectory(parent, parent->tr("Open Dataset Directory"), "./", QFileDialog::ShowDirsOnly)};
+        auto datasetDir = datasetPath.isEmpty() ? QDir{QFileDialog::getExistingDirectory(parent, parent->tr("Open Dataset Directory"), "./", QFileDialog::ShowDirsOnly)}
+                                                : datasetPath;
         auto datasetImagesList = datasetDir.entryList(QStringList() << "*.jpg" << "*.JPG" << "*.png" << "*.PNG", QDir::Files);
         if (datasetImagesList.empty())
         {
@@ -71,7 +72,22 @@ void MainWindow::on_pushButton_create_from_video_clicked()
 }
 
 void MainWindow::on_pushButtonOpenProject_clicked()
-{ 
+{
+    QString projectDirectory = QFileDialog::getExistingDirectory(this, tr("Open project directory"), "./");
+    if (!projectDirectory.isEmpty())
+    {
+      QString projectFilePath = projectDirectory + "/project.json";
+      if (!QFileInfo::exists(projectFilePath))
+      {
+        QFile file(projectFilePath);
+        file.open(QIODevice::WriteOnly);
+      }
+      _datasetProject.loadFromFile(projectFilePath);
+      QString classesNamesFilePath = projectDirectory + "/_.names";
+      loadClassNameList(QFileInfo::exists(classesNamesFilePath) ? classesNamesFilePath : "");
+      loadDatasetList(projectDirectory);
+    }
+#if 0
     QString projectFilePath = QFileDialog::getOpenFileName(this, tr("Open project file"), "./", tr("Yolo labeling tool project (*.json)"));
     if (!projectFilePath.isEmpty())
     {
@@ -79,6 +95,7 @@ void MainWindow::on_pushButtonOpenProject_clicked()
         loadClassNameList();
         loadDatasetList();
     }
+#endif
     init();
 }
 
@@ -350,6 +367,10 @@ void MainWindow::setCurrentImg()
     }
     // TODO: May be more convinient to pass iterator to current dataset
     _ui->label_image->loadClassBoxes(_datasetIt);
+    if (_ui->isDarknetBoxesVisible->isChecked())
+    {
+      detect();
+    }
     _ui->label_image->showImage();
     _ui->label_progress->setText(QString::number(std::distance(_datasetList.begin(), _datasetIt)) + " / " + QString::number(_datasetList.size() - 1));
     _ui->label_file->setText("File: " + _datasetIt.key());
@@ -500,6 +521,8 @@ void MainWindow::updateButtonEnabling(bool isEnabled)
   _ui->tableWidget_label->setEnabled(isEnabled);
   _ui->label_image->setEnabled(isEnabled);
   _ui->pushButtonValidate->setEnabled(isEnabled);
+  _ui->pushButtonGenerateDataset->setEnabled(isEnabled);
+  _ui->loadDarknetModel->setEnabled(isEnabled);
 }
 
 void MainWindow::updateDatasetNavigator()
@@ -511,13 +534,13 @@ void MainWindow::updateDatasetNavigator()
   _ui->horizontalSlider_images->blockSignals(false);
 }
 
-void MainWindow::loadClassNameList()
+void MainWindow::loadClassNameList(QString const& classesFilePath)
 {
     _ui->tableWidget_label->clear();
 
     _classesList = _datasetProject.get("class_names_list", [&]() -> QVariantMap {
         QVariantMap data;
-        auto classesFilePath = QFileDialog::getOpenFileName(this, tr("Open class list file"), "./", tr("Darknet class list file (*.txt *.names)"));
+        //auto classesFilePath = QFileDialog::getOpenFileName(this, tr("Open class list file"), "./", tr("Darknet class list file (*.txt *.names)"));
         if (!classesFilePath.isEmpty())
         {
             QFile classesFile{classesFilePath};
@@ -537,6 +560,11 @@ void MainWindow::loadClassNameList()
         }
         return data;
     });
+    // Append additional class which will be excluded from annotation
+    QList<QVariant> classData;
+    classData.push_back(_classesList.size());
+    classData.push_back(-1);
+    _classesList["excluded_from_annotation"] = classData;
 
     _classesIt = _classesList.begin();
     _ui->label_image->setClasses(&_classesList);
@@ -569,16 +597,43 @@ void MainWindow::exportClassListToFile()
         QTextStream out(&classesFile);
         for (auto const& classItem : classesList)
         {
-            out << classItem << '\n';
+            if (classItem != "excluded_from_annotation")
+            {
+                out << classItem << '\n';
+            }
         }
     }
 }
 
-void MainWindow::loadDatasetList()
+void MainWindow::detect()
+{
+  if (_net == nullptr)
+  {
+    return;
+  }
+  auto boundingBoxesFromDarknet = BoundingBoxSelector::Label::Vector{};
+  auto detections = _net->detect(_datasetIt.key().toStdString());
+  for (const auto& detection : detections)
+  {
+      boundingBoxesFromDarknet.emplace_back(BoundingBoxSelector::Label{"excluded_from_annotation",
+                                                                       QRectF{static_cast<float>(detection.x/1920.0f),
+                                                                              static_cast<float>(detection.y/1280.0f),
+                                                                              static_cast<float>(detection.w/1920.0f),
+                                                                              static_cast<float>(detection.h/1280.0f)},
+                                                                       false});
+//    if (detection.prob > _confThreshold)
+//    {
+//      auto labelstr = _classes[detection.obj_id] + ": " + std::to_string(static_cast<uint32_t>(detection.prob * 100)) + "%";
+//    }
+  }
+  _ui->label_image->addClassBoxesFromDarknet(boundingBoxesFromDarknet);
+}
+
+void MainWindow::loadDatasetList(QString const& datasetPath)
 {
     _datasetList = _datasetProject.get("dataset_list", [&]() -> QVariantMap {
         QVariantMap data;
-        for (auto const& item : openDatasetDir(this))
+        for (auto const& item : openDatasetDir(this, datasetPath))
         {
             data[item] = _ui->label_image->importClassBoxesFromAnnotationFile(item, _classesList);
         }
@@ -594,4 +649,43 @@ void MainWindow::on_pushButtonValidate_clicked()
     ValidationClassBoxes validationClassBoxes{this, &_datasetList, &_classesList};
     connect(&validationClassBoxes, &ValidationClassBoxes::datasetListUpdated, this, &MainWindow::datasetListUpdated);
     validationClassBoxes.exec();
+}
+
+void MainWindow::on_pushButtonGenerateDataset_clicked()
+{
+
+}
+
+void MainWindow::on_loadDarknetModel_clicked()
+{
+  auto modelFile = QFileDialog::getOpenFileName(this, tr("Select darknet model"), "./",  tr("Darknet model file (*.cfg)"));
+  if (modelFile.isEmpty())
+  {
+    return;
+  }
+  auto weightsFile = QFileDialog::getOpenFileName(this, tr("Select darknet weights"), "./",  tr("Darknet weights file (*.weights)"));
+  if (weightsFile.isEmpty())
+  {
+    return;
+  }
+
+  _net = std::make_unique<Detector>(modelFile.toStdString(), weightsFile.toStdString());
+  _ui->isDarknetBoxesVisible->setEnabled(true);
+  _ui->darknetAutoLabeling->setEnabled(true);
+}
+
+void MainWindow::on_darknetAutoLabeling_toggled(bool checked)
+{
+
+}
+
+void MainWindow::on_isDarknetBoxesVisible_toggled(bool checked)
+{
+  if (checked)
+  {
+    detect();
+  }
+  _ui->label_image->boxesFromDarknetVisible(checked);
+  _ui->label_image->setSelectionBoundingBoxFromDarknet(checked);
+  _ui->label_image->showImage();
 }
