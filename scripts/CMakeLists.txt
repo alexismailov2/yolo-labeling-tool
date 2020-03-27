@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.12)
 project(yolo-cfg-generator)
 
 if (NOT YOLO_MODEL_NAME)
@@ -12,6 +12,7 @@ endif()
 if (NOT NEXT_STAGE)
    message(STATUS "Start creating data file")
    execute_process(COMMAND ${CMAKE_COMMAND}
+      .
       -Bgenerate
       -DYOLO_DATASET_FOLDER_PATH=${YOLO_DATASET_FOLDER_PATH}
       -DYOLO_MODEL_NAME=${YOLO_MODEL_NAME}

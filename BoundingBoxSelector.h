@@ -39,6 +39,7 @@ public:
     void addClassBoxesFromDarknet(Label::Vector const& boxes);
     void boxesFromDarknetVisible(bool enable);
     void setSelectionBoundingBoxFromDarknet(bool enable);
+    QSize getImageSize();
 
 signals:
     void Mouse_Moved();

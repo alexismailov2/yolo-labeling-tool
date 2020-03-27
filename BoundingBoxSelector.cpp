@@ -462,3 +462,8 @@ void BoundingBoxSelector::setSelectionBoundingBoxFromDarknet(bool enable)
 {
   _isSelectionBoundingBoxFromDarknet = enable;
 }
+
+auto BoundingBoxSelector::getImageSize() -> QSize
+{
+   return m_inputImg.size();
+}

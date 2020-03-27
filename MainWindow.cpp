@@ -613,13 +613,14 @@ void MainWindow::detect()
   }
   auto boundingBoxesFromDarknet = BoundingBoxSelector::Label::Vector{};
   auto detections = _net->detect(_datasetIt.key().toStdString());
+  auto size_ = _ui->label_image->getImageSize();
   for (const auto& detection : detections)
   {
       boundingBoxesFromDarknet.emplace_back(BoundingBoxSelector::Label{"excluded_from_annotation",
-                                                                       QRectF{static_cast<float>(detection.x/1920.0f),
-                                                                              static_cast<float>(detection.y/1280.0f),
-                                                                              static_cast<float>(detection.w/1920.0f),
-                                                                              static_cast<float>(detection.h/1280.0f)},
+                                                                       QRectF{static_cast<float>(detection.x/static_cast<float>(size_.width())),
+                                                                              static_cast<float>(detection.y/static_cast<float>(size_.height())),
+                                                                              static_cast<float>(detection.w/static_cast<float>(size_.width())),
+                                                                              static_cast<float>(detection.h/static_cast<float>(size_.height()))},
                                                                        false});
 //    if (detection.prob > _confThreshold)
 //    {
