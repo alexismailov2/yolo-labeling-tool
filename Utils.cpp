@@ -6,6 +6,9 @@ void extractClassBoxes(QVariantMap::iterator datasetIt, std::function<void(QStri
     {
         return;
     }
+    // TODO: Should be fixed
+    //auto const datasetItem = datasetIt.value().toMap();
+    //auto const classBoxes = datasetItem["classBoxes"].toMap();
     auto const classBoxes = datasetIt.value().toMap();
     for (auto classBoxesIt = classBoxes.begin(); classBoxesIt != classBoxes.end(); ++classBoxesIt)
     {
@@ -14,6 +17,20 @@ void extractClassBoxes(QVariantMap::iterator datasetIt, std::function<void(QStri
             auto const boxCoords = box.toList();
             extractedClassBoxFn(classBoxesIt.key(), QRectF{boxCoords[0].toReal(), boxCoords[1].toReal(), boxCoords[2].toReal(), boxCoords[3].toReal()});
         }
+    }
+}
+
+void extractClassesCount(QVariantMap::iterator datasetIt, std::function<void(QString const&, size_t count)>&& extractClassesCountFn)
+{
+    if (!datasetIt->isValid())
+    {
+        return;
+    }
+    auto const datasetItem = datasetIt.value().toMap();
+    auto const classBoxes = datasetItem["classBoxes"].toMap();
+    for (auto classBoxesIt = classBoxes.begin(); classBoxesIt != classBoxes.end(); ++classBoxesIt)
+    {
+        extractClassesCountFn(classBoxesIt.key(), classBoxesIt.value().toList().count());
     }
 }
 

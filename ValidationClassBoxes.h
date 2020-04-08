@@ -3,8 +3,10 @@
 #include "ValidationClassBoxesListModel.h"
 
 #include <QDialog>
-#include <QMap>
 #include <QListView>
+#include <QMap>
+
+#include <QtCharts/QChartView>
 
 namespace Ui {
 class ValidationClassBoxes;
@@ -25,10 +27,12 @@ signals:
 
 private:
     void sync();
+    void createGistogram();
 
 private:
     Ui::ValidationClassBoxes* _ui;
     QVariantMap* _datasetList;
     QMap<QString, QListView*> _listWidgets;
     QMap<QString, QList<ClassBoxes>> _classBoxesList;
+    QtCharts::QChartView _chartView;
 };

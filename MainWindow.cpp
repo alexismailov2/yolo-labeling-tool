@@ -1,10 +1,12 @@
 #include "MainWindow.h"
+#include "BalanceObjectsDialog.h"
+#include "Utils.h"
 #include "ui_MainWindow.h"
 
-#include <QFileDialog>
 #include <QColorDialog>
-#include <QKeyEvent>
 #include <QDebug>
+#include <QFileDialog>
+#include <QKeyEvent>
 #include <QShortcut>
 
 #include <QtCore/QProcess>
@@ -12,6 +14,17 @@
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtWidgets/QInputDialog>
+#include <QtWidgets/QRadioButton>
+
+#include <QtCharts/QBarCategoryAxis>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QChart>
+#include <QtCharts/QChartView>
+#include <QtCharts/QStackedBarSeries>
+#include <QtCharts/QValueAxis>
+#include <QtCharts/QVXYModelMapper>
+#include <QtCharts/QLineSeries>
+
 #include <iomanip>
 
 #include <ValidationClassBoxes.h>
@@ -35,6 +48,8 @@ namespace {
         }
         return datasetImagesList;
     }
+
+    DatasetProject::eItemType g_itemType = DatasetProject::eItemType::EXCLUDED;
 
 } /// end namespace anonymous
 
@@ -153,7 +168,12 @@ void MainWindow::on_tableWidget_label_cellDoubleClicked(int row, int column)
       for (auto it = _datasetList.begin(); it != _datasetList.end(); ++it)
       {
         auto classBoxes = it->toMap();
+        // TODO: Should be fixed
+        //auto dataItem = it->toMap();
+        //auto classBoxes = dataItem["classBoxes"].toMap();
         classBoxes[newClassName] = classBoxes.take(oldClassName);
+        //dataItem["classBoxes"] = classBoxes;
+        //it->setValue(dataItem);
         it->setValue(classBoxes);
       }
       _datasetProject.set("dataset_list", _datasetList);
@@ -375,6 +395,7 @@ void MainWindow::setCurrentImg()
     _ui->label_progress->setText(QString::number(std::distance(_datasetList.begin(), _datasetIt)) + " / " + QString::number(_datasetList.size() - 1));
     _ui->label_file->setText("File: " + _datasetIt.key());
     updateDatasetNavigator();
+    updateDatasetTypeSelector();
 }
 
 void MainWindow::setNextImage()
@@ -523,6 +544,9 @@ void MainWindow::updateButtonEnabling(bool isEnabled)
   _ui->pushButtonValidate->setEnabled(isEnabled);
   _ui->pushButtonGenerateDataset->setEnabled(isEnabled);
   _ui->loadDarknetModel->setEnabled(isEnabled);
+  _ui->trainRadioButton->setEnabled(isEnabled);
+  _ui->validRadioButton->setEnabled(isEnabled);
+  _ui->excludedRadioButton->setEnabled(isEnabled);
 }
 
 void MainWindow::updateDatasetNavigator()
@@ -532,6 +556,31 @@ void MainWindow::updateDatasetNavigator()
   _ui->horizontalSlider_images->blockSignals(true);
   _ui->horizontalSlider_images->setValue(std::distance(_datasetList.begin(), _datasetIt));
   _ui->horizontalSlider_images->blockSignals(false);
+}
+
+void MainWindow::updateDatasetTypeSelector()
+{
+  auto const datasetTypeSelector = _datasetIt.value().toMap()["selectedDataset"].toInt();
+  switch(static_cast<DatasetProject::eItemType>(datasetTypeSelector))
+  {
+  case DatasetProject::eItemType::TRAIN:
+    _ui->trainRadioButton->setChecked(true);
+    break;
+  case DatasetProject::eItemType::VALID:
+    _ui->validRadioButton->setChecked(true);
+    break;
+  case DatasetProject::eItemType::EXCLUDED:
+  default:
+    _ui->excludedRadioButton->setChecked(true);
+    break;
+  }
+}
+
+void MainWindow::setDatasetTypeSelector(DatasetProject::eItemType datasetTypeSelector)
+{
+  auto datasetItem = _datasetIt.value().toMap();
+  datasetItem["selectedDataset"] = static_cast<int32_t>(datasetTypeSelector);
+  *_datasetIt = datasetItem;
 }
 
 void MainWindow::loadClassNameList(QString const& classesFilePath)
@@ -636,7 +685,12 @@ void MainWindow::loadDatasetList(QString const& datasetPath)
         QVariantMap data;
         for (auto const& item : openDatasetDir(this, datasetPath))
         {
-            data[item] = _ui->label_image->importClassBoxesFromAnnotationFile(item, _classesList);
+// TODO: Should be fixed
+//            QVariantMap dataItem;
+//            dataItem["classBoxes"] = _ui->label_image->importClassBoxesFromAnnotationFile(item, _classesList);
+//            dataItem["selectedDataset"] = 2;
+//            data[item] = dataItem;
+          data[item] = _ui->label_image->importClassBoxesFromAnnotationFile(item, _classesList);
         }
         return data;
     });
@@ -654,7 +708,9 @@ void MainWindow::on_pushButtonValidate_clicked()
 
 void MainWindow::on_pushButtonGenerateDataset_clicked()
 {
-
+   BalanceObjectsDialog balanceObjectsDialog(this, &_datasetList, &_classesList);
+   //connect(&balanceObjectsDialog, &BalanceObjectsDialog::datasetListUpdated, this, &MainWindow::datasetListUpdated);
+   balanceObjectsDialog.exec();
 }
 
 void MainWindow::on_loadDarknetModel_clicked()
@@ -690,3 +746,83 @@ void MainWindow::on_isDarknetBoxesVisible_toggled(bool checked)
   _ui->label_image->setSelectionBoundingBoxFromDarknet(checked);
   _ui->label_image->showImage();
 }
+
+void MainWindow::on_trainRadioButton_clicked()
+{
+  setDatasetTypeSelector(DatasetProject::eItemType::TRAIN);
+  //createGistograms();
+}
+
+void MainWindow::on_validRadioButton_clicked()
+{
+  setDatasetTypeSelector(DatasetProject::eItemType::VALID);
+  //createGistograms();
+}
+
+void MainWindow::on_excludedRadioButton_clicked()
+{
+  setDatasetTypeSelector(DatasetProject::eItemType::EXCLUDED);
+  //createGistograms();
+}
+
+#if 0
+auto MainWindow::createChart(DatasetProject::eItemType neededItemType) -> QtCharts::QChart*
+{
+  QMap<QString, size_t> classesCount;
+  for (auto datasetIt = _datasetList.begin(); datasetIt != _datasetList.end(); ++datasetIt)
+  {
+    auto const currentItemType =
+        static_cast<DatasetProject::eItemType>(datasetIt.value().toMap()["selectedDataset"].toInt());
+    if (currentItemType != neededItemType)
+    {
+      continue;
+    }
+    extractClassesCount(datasetIt, [&](QString const& className, size_t count) {
+      if (className != "excluded_from_annotation")
+      {
+        classesCount[className] += count;
+      }
+    });
+  }
+  auto* objectsFrequency = new QtCharts::QBarSet(neededItemType == DatasetProject::eItemType::TRAIN ? "Train" : "Valid");
+  auto maxSize = 0;
+  for (auto it = classesCount.begin(); it != classesCount.end(); ++it)
+  {
+    *objectsFrequency << it.value();
+    maxSize = (it.value() > maxSize) ? it.value() : maxSize;
+  }
+
+  auto* barseries = new QtCharts::QStackedBarSeries();
+  barseries->append(objectsFrequency);
+
+  auto* chart = new QtCharts::QChart();
+  chart->addSeries(barseries);
+  chart->update();
+
+  auto* axisX = new QtCharts::QBarCategoryAxis();
+  axisX->append(classesCount.keys());
+  chart->addAxis(axisX, Qt::AlignBottom);
+  barseries->attachAxis(axisX);
+  axisX->setRange(QString("Jan"), QString("Jun"));
+
+  auto* axisY = new QtCharts::QValueAxis();
+  chart->addAxis(axisY, Qt::AlignLeft);
+  barseries->attachAxis(axisY);
+  axisY->setRange(0, maxSize);
+
+  return chart;
+}
+
+void MainWindow::createGistograms()
+{
+  _chartViewTrain.setChart(createChart(DatasetProject::eItemType::TRAIN));
+  _chartViewTrain.setRenderHint(QPainter::Antialiasing);
+  _chartViewTrain.update();
+  _ui->horizontalLayout_6->addWidget(&_chartViewTrain);
+
+  _chartViewValid.setChart(createChart(DatasetProject::eItemType::VALID));
+  _chartViewValid.setRenderHint(QPainter::Antialiasing);
+  _chartViewValid.update();
+  _ui->horizontalLayout_6->addWidget(&_chartViewValid);
+}
+#endif

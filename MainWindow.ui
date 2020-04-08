@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1528</width>
-    <height>953</height>
+    <width>1531</width>
+    <height>1332</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -446,7 +446,7 @@
              </size>
             </property>
             <property name="text">
-             <string>Generate dataset</string>
+             <string>BalanceObjects</string>
             </property>
            </widget>
           </item>
@@ -464,24 +464,60 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="darknetAutoLabeling">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="text">
-               <string>DarknetAutolabeling</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="isDarknetBoxesVisible">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="text">
-               <string>isDarknetBoxesVisible</string>
-              </property>
-             </widget>
+             <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <item>
+               <layout class="QVBoxLayout" name="verticalLayout_5">
+                <item>
+                 <widget class="QCheckBox" name="darknetAutoLabeling">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>DarknetAutolabeling</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="isDarknetBoxesVisible">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>isDarknetBoxesVisible</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="verticalLayout_6">
+                <item>
+                 <widget class="QRadioButton" name="trainRadioButton">
+                  <property name="text">
+                   <string>train</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="validRadioButton">
+                  <property name="text">
+                   <string>valid</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="excludedRadioButton">
+                  <property name="text">
+                   <string>exculed</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_6"/>
+              </item>
+             </layout>
             </item>
            </layout>
           </item>
@@ -624,7 +660,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1528</width>
+     <width>1531</width>
      <height>22</height>
     </rect>
    </property>

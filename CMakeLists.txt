@@ -8,9 +8,13 @@ if(CMAKE_VERSION VERSION_LESS "3.7.0")
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
 endif()
 
-include_directories(${CMAKE_CURRENT_LIST_DIR})
+find_package(Qt5 COMPONENTS Widgets Core Gui Charts REQUIRED)
 
-find_package(Qt5 COMPONENTS Widgets Core Gui REQUIRED)
+include_directories(
+   ${CMAKE_CURRENT_LIST_DIR}
+   ${Qt5Charts_INCLUDE_DIRS})
+
+message(STATUS Qt5Charts_INCLUDE_DIRS=${Qt5Charts_INCLUDE_DIRS})
 
 add_executable(${PROJECT_NAME}
   MainWindow.ui
@@ -23,6 +27,9 @@ add_executable(${PROJECT_NAME}
   ValidationClassBoxes.cpp
   ValidationClassBoxesListModel.h
   ValidationClassBoxesListModel.cpp
+  BalanceObjectsDialog.ui
+  BalanceObjectsDialog.h
+  BalanceObjectsDialog.cpp
   BoundingBoxSelector.cpp
   BoundingBoxSelector.h
   Utils.cpp
@@ -41,6 +48,7 @@ target_link_libraries(${PROJECT_NAME}
   Qt5::Core
   Qt5::Widgets
   Qt5::Gui
+  Qt5::Charts
   -L${CMAKE_CURRENT_LIST_DIR}
   dark
   )

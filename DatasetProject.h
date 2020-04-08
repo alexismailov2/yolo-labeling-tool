@@ -8,6 +8,14 @@
 class DatasetProject
 {
 public:
+    enum class eItemType
+    {
+        TRAIN = 0,
+        VALID,
+        EXCLUDED
+    };
+
+public:
     DatasetProject();
     ~DatasetProject();
     DatasetProject(DatasetProject&&) noexcept = default;

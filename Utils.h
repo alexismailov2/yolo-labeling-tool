@@ -8,6 +8,7 @@
 
 // TODO: Should be moved to datasetproject class
 void extractClassBoxes(QVariantMap::iterator datasetIt, std::function<void(QString const&, QRectF&&)>&& extractedClassBoxFn);
+void extractClassesCount(QVariantMap::iterator datasetIt, std::function<void(QString const&, size_t count)>&& extractClassesCountFn);
 
 auto toAbsolute(QPointF const& in, QSize const& size) noexcept -> QPoint;
 auto toAbsolute(QRectF const& in, QSize const& size) noexcept -> QRect;

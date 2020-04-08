@@ -13,8 +13,9 @@
 
 #include <yolo_v2_class.hpp>
 
-#include <iostream>
+#include <QtCharts/QChartView>
 #include <fstream>
+#include <iostream>
 
 namespace Ui {
 class MainWindow;
@@ -53,6 +54,12 @@ private slots:
 
     void on_isDarknetBoxesVisible_toggled(bool checked);
 
+    void on_trainRadioButton_clicked();
+
+    void on_validRadioButton_clicked();
+
+    void on_excludedRadioButton_clicked();
+
 protected:
     void wheelEvent(QWheelEvent*);
     void keyPressEvent(QKeyEvent *);
@@ -68,6 +75,8 @@ private:
 
     void updateButtonEnabling(bool isEnabled);
     void updateDatasetNavigator();
+    void updateDatasetTypeSelector();
+    void setDatasetTypeSelector(DatasetProject::eItemType datasetTypeSelector);
 
     bool openVideos();
 
@@ -77,16 +86,19 @@ private:
     void loadClassNameList(QString const& classesFilePath);
     void loadDatasetList(QString const& datasetPath);
     void exportClassListToFile();
-
+#if 0
+    auto createChart(DatasetProject::eItemType neededItemType = DatasetProject::eItemType::TRAIN) -> QtCharts::QChart*;
+    void createGistograms();
+#endif
     void detect();
 
-    Ui::MainWindow*        _ui;
+    Ui::MainWindow*           _ui;
     // TODO: May be it should be stored in the datasetproject source
-    QVariantMap            _datasetList;
-    QVariantMap::iterator  _datasetIt;
-    QVariantMap            _classesList;
-    QVariantMap::iterator  _classesIt;
+    QVariantMap               _datasetList;
+    QVariantMap::iterator     _datasetIt;
+    QVariantMap               _classesList;
+    QVariantMap::iterator     _classesIt;
 
-    DatasetProject         _datasetProject;
+    DatasetProject            _datasetProject;
     std::unique_ptr<Detector> _net;
 };

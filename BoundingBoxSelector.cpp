@@ -387,15 +387,17 @@ auto BoundingBoxSelector::importClassBoxesFromAnnotationFile(QString const& labe
                 auto boxesList = classBoxesData[className].toList();
                 boxesList.push_back(QList<QVariant>{x, y, width, height});
                 classBoxesData[className] = boxesList;
-#if 0
-                // Adding box to _datasetIt
-                auto data = _datasetIt->toMap();
-                auto boxesList = data[_focusedClassName].toList();
-                boxesList.push_back(QList<QVariant>{x, y, width, height});
-                data[_focusedClassName] = boxesList;
-                _datasetIt->setValue(data);
-#endif
-                //emit datasetIteratorUpdated();
+
+//#if 0
+//                // Adding box to _datasetIt
+//                auto data = _datasetIt->toMap();
+//                auto boxesList = data[_focusedClassName].toList();
+//                boxesList.push_back(QList<QVariant>{x, y, width, height});
+//                data[_focusedClassName] = boxesList;
+//                _datasetIt->setValue(data);
+//
+//                //emit datasetIteratorUpdated();
+//#endif
             }
             catch (std::out_of_range const& e)
             {

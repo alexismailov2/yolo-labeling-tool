@@ -3,9 +3,20 @@
 
 #include "Utils.h"
 
-#include <QMenu>
 #include <QDebug>
+#include <QMenu>
 #include <QProgressDialog>
+
+#include <QtCharts/QBarCategoryAxis>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QChart>
+#include <QtCharts/QChartView>
+#include <QtCharts/QStackedBarSeries>
+#include <QtCharts/QValueAxis>
+#include <QtCharts/QVXYModelMapper>
+#include <QtCharts/QLineSeries>
+
+#include <QtWidgets/QTableView>
 
 ValidationClassBoxes::ValidationClassBoxes(QWidget *parent, QVariantMap* datasetList, QVariantMap* classList)
     : QDialog(parent)
@@ -91,8 +102,13 @@ ValidationClassBoxes::ValidationClassBoxes(QWidget *parent, QVariantMap* dataset
                     currentClassList->model()->removeRow(selectedIndex.front().row());
                 }
             }
+            createGistogram();
+            _chartView.update();
         });
     }
+
+    createGistogram();
+    _ui->tabWidget->addTab(&_chartView, "Gistogram");
 
     progressDialog.close();
     _ui->tabWidget->show();
@@ -115,8 +131,52 @@ void ValidationClassBoxes::sync()
                 }
             }
         }
+        // TODO: Should be fixed
+        //auto dataItem = datasetIt.value().toMap();
+        //auto dataItemClassBoxes = dataItem["classBoxes"];
         datasetIt->setValue(classBoxes);
     }
+}
+
+void ValidationClassBoxes::createGistogram()
+{
+  auto* objectsFrequency = new QtCharts::QBarSet("Count");
+  QStringList categories;
+  auto maxSize = 0;
+  for (auto it = _classBoxesList.begin(); it != _classBoxesList.end(); ++it)
+  {
+    if (it.key() == "excluded_from_annotation")
+    {
+      continue;
+    }
+    categories << it.key();
+    *objectsFrequency << it->size();
+    maxSize = (it->size() > maxSize) ? it->size() : maxSize;
+  }
+
+  auto* barseries = new QtCharts::QStackedBarSeries();
+  barseries->append(objectsFrequency);
+
+  auto* chart = new QtCharts::QChart();
+  chart->addSeries(barseries);
+  chart->setTitle("Objects frequency");
+  chart->update();
+
+  auto* axisX = new QtCharts::QBarCategoryAxis();
+  axisX->append(categories);
+  chart->addAxis(axisX, Qt::AlignBottom);
+  //lineseries->attachAxis(axisX);
+  barseries->attachAxis(axisX);
+  axisX->setRange(QString("Jan"), QString("Jun"));
+
+  auto* axisY = new QtCharts::QValueAxis();
+  chart->addAxis(axisY, Qt::AlignLeft);
+  //lineseries->attachAxis(axisY);
+  barseries->attachAxis(axisY);
+  axisY->setRange(0, maxSize);
+
+  _chartView.setChart(chart);
+  _chartView.setRenderHint(QPainter::Antialiasing);
 }
 
 ValidationClassBoxes::~ValidationClassBoxes()

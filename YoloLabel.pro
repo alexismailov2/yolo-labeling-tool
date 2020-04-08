@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui widgets concurrent
+QT       += core gui widgets concurrent charts
 
 TARGET = YoloLabel
 TEMPLATE = app
@@ -29,7 +29,9 @@ SOURCES += \
         ValidationClassBoxes.cpp \
         ValidationClassBoxesListModel.cpp \
         main.cpp \
-        BoundingBoxSelector.cpp
+        BoundingBoxSelector.cpp \
+    BalanceObjects.cpp \
+    BalanceObjectsDialog.cpp
 
 HEADERS += \
         BoundingBoxSelector.h \
@@ -37,11 +39,14 @@ HEADERS += \
         MainWindow.h \
         Utils.h \
         ValidationClassBoxes.h \
-        ValidationClassBoxesListModel.h
+        ValidationClassBoxesListModel.h \
+    BalanceObjects.h \
+    BalanceObjectsDialog.h
 
 FORMS += \
         MainWindow.ui \
-        ValidationClassBoxes.ui
+        ValidationClassBoxes.ui \
+    BalanceObjectsDialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
